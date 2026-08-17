@@ -1,0 +1,29 @@
+# Python AI Microservice — FastAPI + OpenCV + Tesseract + NLP
+#
+# Core intelligence layer of the document organizer. Pinned to versions
+# known to work together on python:3.10-slim (see Dockerfile).
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# ── Computer Vision pipeline (Phase 3) ────────────────────────────────────
+# Headless build avoids pulling GUI runtime deps into the slim container;
+# OS-level libs (libgl1-mesa-glx, libsm6, libxext6) are still installed in
+# the Dockerfile per the deployment blueprint.
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+Pillow==11.0.0
+pdf2image==1.17.0
+
+# ── OCR engine (Phase 4) ──────────────────────────────────────────────────
+pytesseract==0.3.13
+
+# ── NLP sanitization + entity extraction (Phase 5) ────────────────────────
+ftfy==6.3.1
+
+# ── Semantic embedding + clustering (Phase 6) ─────────────────────────────
+sentence-transformers==3.3.1
+
+# ── Development / tests ───────────────────────────────────────────────────
+pytest==8.3.4
