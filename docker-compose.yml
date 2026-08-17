@@ -1,0 +1,103 @@
+# ── Master orchestration (Phase 8) ───────────────────────────────────────
+# Four services on one isolated bridge network:
+#
+#   frontend  ──► node-api  ──► python-ai        (internal DNS names only)
+#                    └───────► mongo-db
+#
+# The Python AI service is exposed ONLY on the internal network — no
+# published ports — so the processing engine is shielded from the public
+# internet. MongoDB and upload artifacts persist in named volumes.
+
+name: doc-organizer
+
+services:
+  # ── Database ────────────────────────────────────────────────────────────
+  mongo-db:
+    image: mongo:7
+    container_name: doc-organizer-mongo
+    restart: unless-stopped
+    networks:
+      - doc-net
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── AI intelligence engine (FastAPI + OpenCV + Tesseract) ───────────────
+  python-ai:
+    build: ./ai-service
+    container_name: doc-organizer-ai
+    restart: unless-stopped
+    networks:
+      - doc-net
+    # Internal only — never published to the host.
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── API gateway / orchestrator (Node.js + Express) ──────────────────────
+  node-api:
+    build: ./backend
+    container_name: doc-organizer-gateway
+    restart: unless-stopped
+    depends_on:
+      mongo-db:
+        condition: service_healthy
+      python-ai:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      # Internal DNS service discovery on the bridge network:
+      - MONGODB_URI=mongodb://mongo-db:27017/doc_organizer
+      - AI_SERVICE_URL=http://python-ai:8000
+      # !! Override in production: openssl rand -hex 32
+      - JWT_SECRET=compose_dev_secret_change_me
+      - JWT_EXPIRES_IN=7d
+      - AI_TIMEOUT_MS=120000
+      - UPLOAD_DIR=/app/uploads
+    ports:
+      - "5000:5000"
+    networks:
+      - doc-net
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Web dashboard (React + nginx) ───────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: doc-organizer-web
+    restart: unless-stopped
+    depends_on:
+      node-api:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    networks:
+      - doc-net
+
+volumes:
+  mongo-data:
+    name: doc-organizer-mongo-data
+  uploads:
+    name: doc-organizer-uploads
+
+networks:
+  doc-net:
+    name: doc-organizer-net
+    driver: bridge
