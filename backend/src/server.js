@@ -14,11 +14,15 @@ const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function main() {
-  // 1. Establish the persistent MongoDB connection (retries internally).
-  await connectDB();
+  // 1. Optionally skip MongoDB for local smoke tests / no-DB validation.
+  if (process.env.SKIP_DB_CONNECT !== 'true' && process.env.SKIP_DB_CONNECT !== '1') {
+    await connectDB();
+  } else {
+    console.warn('[gateway] Starting without MongoDB because SKIP_DB_CONNECT=true');
+  }
 
-  // 2. Start the HTTP gateway only after the DB is reachable, so the
-  //    orchestrator never serves requests against a dead data layer.
+  // 2. Start the HTTP gateway even when MongoDB is intentionally disabled so
+  //    health checks and non-DB routes can be exercised during smoke tests.
   const server = app.listen(PORT, HOST, () => {
     console.info(`[gateway] API gateway listening on http://${HOST}:${PORT}`);
     console.info(`[gateway] AI service target: ${process.env.AI_SERVICE_URL || 'http://localhost:8000'}`);

@@ -95,3 +95,21 @@ test('error handler maps Multer LIMIT_FILE_SIZE to 413 and axios timeouts to 504
   const timeoutRes = await run(timeoutErr);
   assert.equal(timeoutRes.code, 504);
 });
+
+// ── no-database startup mode ─────────────────────────────────────────────────
+test('connectDB skips MongoDB when environment requests a no-database smoke test', async () => {
+  const original = process.env.SKIP_DB_CONNECT;
+  process.env.SKIP_DB_CONNECT = 'true';
+
+  try {
+    const { connectDB } = require('../src/db/db');
+    const result = await connectDB();
+    assert.equal(result, null);
+  } finally {
+    if (original === undefined) {
+      delete process.env.SKIP_DB_CONNECT;
+    } else {
+      process.env.SKIP_DB_CONNECT = original;
+    }
+  }
+});

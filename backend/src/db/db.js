@@ -112,6 +112,11 @@ function registerConnectionListeners() {
  * @returns {Promise<mongoose.Connection>}
  */
 async function connectDB(uri) {
+  if (process.env.SKIP_DB_CONNECT === 'true' || process.env.SKIP_DB_CONNECT === '1') {
+    console.warn('[db] MongoDB connection skipped because SKIP_DB_CONNECT=true');
+    return null;
+  }
+
   registerConnectionListeners();
   const target = uri || process.env.MONGODB_URI || DEFAULT_URI;
   return connectWithRetry(target);
