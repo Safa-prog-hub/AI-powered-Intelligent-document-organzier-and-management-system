@@ -3,6 +3,7 @@ import {
   deleteDocument as apiDelete,
   fetchDocuments,
   fetchExpiring,
+  getDocument,
   uploadDocument as apiUpload,
 } from '../api/client';
 
@@ -15,9 +16,6 @@ const DocumentContext = createContext(null);
  *  - searchQuery : debounced Smart Search input (also sent to backend)
  *  - uploadState : { status: 'idle'|'uploading'|'processing'|'success'|'error',
  *                    progress, fileName, error }
- *
- * Optimistic update: a successful upload inserts the AI-enriched document at
- * the top of the library without a refetch.
  */
 export function DocumentProvider({ children }) {
   const [documents, setDocuments] = useState([]);
@@ -26,6 +24,7 @@ export function DocumentProvider({ children }) {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+
   const [uploadState, setUploadState] = useState({
     status: 'idle',
     progress: 0,
@@ -37,7 +36,12 @@ export function DocumentProvider({ children }) {
     try {
       setLoading(true);
       setLoadError(null);
-      const [docs, exp] = await Promise.all([fetchDocuments(), fetchExpiring()]);
+
+      const [docs, exp] = await Promise.all([
+        fetchDocuments(),
+        fetchExpiring(),
+      ]);
+
       setDocuments(docs);
       setExpiring(exp);
     } catch (err) {
@@ -58,12 +62,16 @@ export function DocumentProvider({ children }) {
   const applySearch = useCallback(
     async (query) => {
       const trimmed = (query || '').trim();
+
       setSearchQuery(trimmed);
+
       if (!trimmed) {
         await refresh();
         return;
       }
+
       setSearching(true);
+
       try {
         const docs = await fetchDocuments({ search: trimmed });
         setDocuments(docs);
@@ -77,22 +85,95 @@ export function DocumentProvider({ children }) {
     [refresh]
   );
 
+  /**
+   * Upload a document.
+   *
+   * The backend now returns quickly with processingStatus = "processing".
+   * The AI service continues processing the document in the background.
+   *
+   * We poll the document every second until it becomes "completed"
+   * or "failed", then update the UI with the fully processed document.
+   */
   const upload = useCallback(
     async (file) => {
-      setUploadState({ status: 'uploading', progress: 0, fileName: file.name, error: null });
+      setUploadState({
+        status: 'uploading',
+        progress: 0,
+        fileName: file.name,
+        error: null,
+      });
+
       try {
-        // Progress callback drives the "Uploading to Server" bar...
+        // Upload the file to the backend.
         const doc = await apiUpload(file, (pct) => {
-          setUploadState((s) => (s.status === 'uploading' ? { ...s, progress: pct } : s));
+          setUploadState((s) =>
+            s.status === 'uploading'
+              ? { ...s, progress: pct }
+              : s
+          );
         });
-        // ...the backend is still awaiting the Python AI microservice here,
-        // so flip to the "Processing AI Extraction" skeleton.
-        setUploadState({ status: 'processing', progress: 100, fileName: file.name, error: null });
-        setDocuments((docs) => [doc, ...docs]);
-        setUploadState({ status: 'success', progress: 100, fileName: file.name, error: null });
-        return doc;
+
+        // The backend accepted the file.
+        // AI processing is now happening in the background.
+        setUploadState({
+          status: 'processing',
+          progress: 100,
+          fileName: file.name,
+          error: null,
+        });
+
+        let processedDoc = doc;
+
+        // Poll the backend once every second.
+        // Maximum: 30 attempts = approximately 30 seconds.
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          processedDoc = await getDocument(doc._id);
+
+          if (processedDoc.processingStatus === 'completed') {
+            break;
+          }
+
+          if (processedDoc.processingStatus === 'failed') {
+            throw new Error(
+              processedDoc.processingError ||
+                'Document processing failed.'
+            );
+          }
+        }
+
+        // If processing did not finish within 30 seconds,
+        // show an error instead of displaying incomplete data.
+        if (processedDoc.processingStatus !== 'completed') {
+          throw new Error(
+            'Document processing is taking too long. Please refresh.'
+          );
+        }
+
+        // Add the fully processed document to the top of the library.
+        // Remove any older copy of the same document first.
+        setDocuments((docs) => [
+          processedDoc,
+          ...docs.filter((d) => d._id !== processedDoc._id),
+        ]);
+
+        setUploadState({
+          status: 'success',
+          progress: 100,
+          fileName: file.name,
+          error: null,
+        });
+
+        return processedDoc;
       } catch (err) {
-        setUploadState({ status: 'error', progress: 0, fileName: file.name, error: err.message });
+        setUploadState({
+          status: 'error',
+          progress: 0,
+          fileName: file.name,
+          error: err.message,
+        });
+
         throw err;
       }
     },
@@ -102,8 +183,14 @@ export function DocumentProvider({ children }) {
   const remove = useCallback(
     async (id) => {
       await apiDelete(id);
-      setDocuments((docs) => docs.filter((d) => d._id !== id));
-      setExpiring((docs) => docs.filter((d) => d._id !== id));
+
+      setDocuments((docs) =>
+        docs.filter((d) => d._id !== id)
+      );
+
+      setExpiring((docs) =>
+        docs.filter((d) => d._id !== id)
+      );
     },
     []
   );
@@ -122,14 +209,36 @@ export function DocumentProvider({ children }) {
       remove,
       refresh,
     }),
-    [documents, expiring, searchQuery, searching, applySearch, loading, loadError, uploadState, upload, remove, refresh]
+    [
+      documents,
+      expiring,
+      searchQuery,
+      searching,
+      applySearch,
+      loading,
+      loadError,
+      uploadState,
+      upload,
+      remove,
+      refresh,
+    ]
   );
 
-  return <DocumentContext.Provider value={value}>{children}</DocumentContext.Provider>;
+  return (
+    <DocumentContext.Provider value={value}>
+      {children}
+    </DocumentContext.Provider>
+  );
 }
 
 export function useDocuments() {
   const ctx = useContext(DocumentContext);
-  if (!ctx) throw new Error('useDocuments must be used inside <DocumentProvider>');
+
+  if (!ctx) {
+    throw new Error(
+      'useDocuments must be used inside <DocumentProvider>'
+    );
+  }
+
   return ctx;
 }

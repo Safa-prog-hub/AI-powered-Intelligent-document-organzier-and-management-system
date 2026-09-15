@@ -35,19 +35,29 @@ def test_clean_text_repairs_mojibake():
 
 # ── classify_document ─────────────────────────────────────────────────────
 
-def test_classify_pan_by_tax_keywords():
-    assert classify_document(["INCOME TAX DEPARTMENT", "Permanent Account Number"]) == "PAN"
-    assert classify_document(["This is a tax document"]) == "PAN"
+def test_classify_pan_by_strong_keywords():
+    assert classify_document(
+        ["INCOME TAX DEPARTMENT", "Permanent Account Number"]
+    ) == "PAN"
+
+    # "tax" alone is not strong enough to classify a document as PAN.
+    assert classify_document(["This is a tax document"]) == "Unknown"
 
 
-def test_classify_aadhaar_by_uidai_and_gender():
-    assert classify_document(["UIDAI", "Government of India"]) == "Aadhaar"
-    assert classify_document(["Male", "Date of Birth"]) == "Aadhaar"
-    assert classify_document(["Female"]) == "Aadhaar"
+def test_classify_aadhaar_by_strong_keywords():
+    assert classify_document(
+        ["UIDAI", "Government of India"]
+    ) == "Aadhaar"
+
+    # Gender / DOB alone are not strong enough to classify a document as Aadhaar.
+    assert classify_document(["Male", "Date of Birth"]) == "Unknown"
+    assert classify_document(["Female"]) == "Unknown"
 
 
 def test_classify_unknown():
-    assert classify_document(["Grocery receipt", "Milk 30 rupees"]) == "Unknown"
+    assert classify_document(
+        ["Grocery receipt", "Milk 30 rupees"]
+    ) == "Unknown"
 
 
 # ── extract_pan (with OCR error correction) ───────────────────────────────
@@ -87,51 +97,80 @@ def test_extract_pan_ignores_invalid_candidates():
 # ── extract_aadhaar ───────────────────────────────────────────────────────
 
 def test_extract_aadhaar_spaced():
-    assert extract_aadhaar(["Enrolment No: 2345 6789 0123"]) == "2345 6789 0123"
+    assert extract_aadhaar(
+        ["Enrolment No: 2345 6789 0123"]
+    ) == "2345 6789 0123"
 
 
 def test_extract_aadhaar_unspaced():
-    assert extract_aadhaar(["234567890123"]) == "234567890123"
-
+    assert extract_aadhaar(
+        ["234567890123"]
+    ) == "2345 6789 0123"
 
 def test_extract_aadhaar_missing():
-    assert extract_aadhaar(["No number here"]) is None
+    assert extract_aadhaar(
+        ["No number here"]
+    ) is None
 
 
 # ── extract_dates ─────────────────────────────────────────────────────────
 
 def test_extract_dates_formats_and_sorting():
     lines = ["DOB: 15/08/1990", "Expiry: 31-12-2028"]
+
     dates = extract_dates(lines)
+
     assert dates[0] == datetime.datetime(1990, 8, 15)
     assert dates[-1] == datetime.datetime(2028, 12, 31)
     assert dates == sorted(dates)
 
 
 def test_extract_dates_two_digit_year():
-    assert extract_dates(["25/01/26"]) == [datetime.datetime(2026, 1, 25)]
+    assert extract_dates(
+        ["25/01/26"]
+    ) == [datetime.datetime(2026, 1, 25)]
 
 
 def test_extract_dates_rejects_invalid():
-    assert extract_dates(["32/13/2020"]) == []
+    assert extract_dates(
+        ["32/13/2020"]
+    ) == []
 
 
 # ── extract_expiry_date / issue_date ──────────────────────────────────────
 
 def test_extract_expiry_date_keywords():
-    assert extract_expiry_date(["Valid Till: 31/12/2028"]) == "2028-12-31"
-    assert extract_expiry_date(["Valid Upto 31-12-2028"]) == "2028-12-31"
-    assert extract_expiry_date(["Expiry Date: 01/02/2029"]) == "2029-02-01"
-    assert extract_expiry_date(["Valid Until 15/03/2030"]) == "2030-03-15"
+    assert extract_expiry_date(
+        ["Valid Till: 31/12/2028"]
+    ) == "2028-12-31"
+
+    assert extract_expiry_date(
+        ["Valid Upto 31-12-2028"]
+    ) == "2028-12-31"
+
+    assert extract_expiry_date(
+        ["Expiry Date: 01/02/2029"]
+    ) == "2029-02-01"
+
+    assert extract_expiry_date(
+        ["Valid Until 15/03/2030"]
+    ) == "2030-03-15"
 
 
 def test_extract_expiry_date_ignores_non_adjacent_dates():
-    assert extract_expiry_date(["DOB: 15/08/1990"]) is None
+    assert extract_expiry_date(
+        ["DOB: 15/08/1990"]
+    ) is None
 
 
 def test_extract_issue_date():
-    assert extract_issue_date(["Date of Issue: 12/05/2021"]) == "2021-05-12"
-    assert extract_issue_date(["Issued 01/01/2020"]) == "2020-01-01"
+    assert extract_issue_date(
+        ["Date of Issue: 12/05/2021"]
+    ) == "2021-05-12"
+
+    assert extract_issue_date(
+        ["Issued 01/01/2020"]
+    ) == "2020-01-01"
 
 
 # ── extract_name ──────────────────────────────────────────────────────────
@@ -142,12 +181,20 @@ def test_extract_name_labeled():
 
 
 def test_extract_name_title_case_heuristic():
-    lines = ["UIDAI", "Government of India", "Rahul Sharma", "DOB: 15/08/1990"]
+    lines = [
+        "UIDAI",
+        "Government of India",
+        "Rahul Sharma",
+        "DOB: 15/08/1990",
+    ]
+
     assert extract_name(lines) == "Rahul Sharma"
 
 
 def test_extract_name_none():
-    assert extract_name(["income tax department", "permanent account number"]) is None
+    assert extract_name(
+        ["income tax department", "permanent account number"]
+    ) is None
 
 
 # ── extract_entities aggregation ──────────────────────────────────────────
@@ -161,7 +208,9 @@ def test_extract_entities_aadhaar_card():
         "2345 6789 0123\n"
         "Female\n"
     )
+
     result = extract_entities(raw)
+
     assert result["Document_Type"] == "Aadhaar"
     assert result["ID_Number"] == "2345 6789 0123"
     assert result["Date_of_Birth"] == "1992-11-22"
@@ -177,7 +226,9 @@ def test_extract_entities_pan_card():
         "Name: Vikram Singh\n"
         "Date of Issue: 10/04/2018\n"
     )
+
     result = extract_entities(raw)
+
     assert result["Document_Type"] == "PAN"
     assert result["ID_Number"] == "ABCDE1234F"
     assert result["Name"] == "Vikram Singh"

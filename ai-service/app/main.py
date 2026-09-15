@@ -35,6 +35,7 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "application/pdf"}
 CATEGORY_BY_TYPE = {
     "PAN": "Finance",
     "Aadhaar": "ID Proof",
+     "Driving Licence": "ID Proof",
 }
 
 app = FastAPI(

@@ -60,6 +60,11 @@ export async function fetchExpiring() {
   const { data } = await API.get('/documents/expiring');
   return data.documents;
 }
+/** Fetch one document by ID. */
+export async function getDocument(id) {
+  const { data } = await API.get(`/documents/${id}`);
+  return data.document;
+}
 
 /**
  * Upload a document with upload-progress tracking.
