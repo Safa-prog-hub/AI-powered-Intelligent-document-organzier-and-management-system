@@ -33,9 +33,23 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "application/pdf"}
 
 # Category mapping produced by the classifier (Phase 5 → schema enum).
 CATEGORY_BY_TYPE = {
-    "PAN": "Finance",
+    # ID Proof
     "Aadhaar": "ID Proof",
-     "Driving Licence": "ID Proof",
+    "Driving Licence": "ID Proof",
+    "Passport": "ID Proof",
+    "Voter ID": "ID Proof",
+
+    # Education
+    "Marksheet": "Education",
+
+    # Finance
+    "PAN": "Finance",
+    "Bank Statement": "Finance",
+    "Salary Slip": "Finance",
+    "Invoice": "Finance",
+
+    # Insurance
+    "Insurance": "Insurance",
 }
 
 app = FastAPI(

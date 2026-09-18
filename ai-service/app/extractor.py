@@ -68,27 +68,34 @@ DOCUMENT_UNKNOWN = "Unknown"
 
 # PAN:
 # 5 uppercase letters + 4 digits + 1 uppercase letter
+
 PAN_STRICT_REGEX = re.compile(
     r"^[A-Z]{5}[0-9]{4}[A-Z]$"
 )
 
+
 # PAN candidates:
 # Any isolated 10-character alphanumeric sequence.
+
 PAN_CANDIDATE_REGEX = re.compile(
     r"(?<![A-Z0-9])[A-Z0-9]{10}(?![A-Z0-9])",
     re.IGNORECASE,
 )
 
+
 # Aadhaar:
 # 12 digits in 4-4-4 groups with optional spaces.
+
 AADHAAR_REGEX = re.compile(
     r"\b\d{4}\s?\d{4}\s?\d{4}\b"
 )
+
 
 # Limited OCR-tolerant Aadhaar pattern.
 #
 # Characters such as O/0, I/1, S/5, B/8 and G/6
 # can occasionally be confused by OCR.
+
 AADHAAR_FUZZY_REGEX = re.compile(
     r"(?<![A-Z0-9])"
     r"([0-9OQDILSBG]{4})\s*"
@@ -98,47 +105,56 @@ AADHAAR_FUZZY_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+
 # Driving Licence number.
 #
 # Common Indian format:
 # XX00 2025 1234567
 #
 # Also allows the groups to be separated by spaces.
+
 DRIVING_LICENCE_REGEX = re.compile(
     r"\b[A-Z]{2}\s*\d{2}\s*\d{4}\s*\d{5,8}\b",
     re.IGNORECASE,
 )
 
+
 # Dates:
 # DD/MM/YYYY
 # DD-MM-YYYY
 # Also accepts single-digit day/month and 2-digit years.
+
 DATE_REGEX = re.compile(
     r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b"
 )
 
+
 # Expiry keywords followed by a date.
+
 EXPIRY_PATTERNS = [
     re.compile(
         r"(?<![A-Za-z0-9])"
         r"(?:expiry|expires?|expiration|"
         r"valid\s+(?:till|until|upto|up\s+to|through|to))"
-        r"\s*(?:date)?\s*[:=\\-]?\s*"
+        r"\s*(?:date)?\s*[:=\-]?\s*"
         r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
         re.IGNORECASE,
     ),
 ]
 
+
 # Issue-date keywords followed by a date.
+
 ISSUE_PATTERNS = [
     re.compile(
         r"(?<![A-Za-z0-9])"
         r"(?:issue|issued|date\s+of\s+issue|issuance)"
-        r"\s*(?:date)?\s*[:=\\-]?\s*"
+        r"\s*(?:date)?\s*[:=\-]?\s*"
         r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
         re.IGNORECASE,
     ),
 ]
+
 
 # Name labels.
 #
@@ -147,6 +163,7 @@ ISSUE_PATTERNS = [
 #   Name - Rahul Sharma
 #   Full Name: Rahul Sharma
 #   Holder Name: Rahul Sharma
+
 NAME_LABEL_REGEX = re.compile(
     r"^\s*"
     r"(?:name|full\s+name|holder\s+name|"
@@ -158,7 +175,9 @@ NAME_LABEL_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+
 # A line containing only a name label.
+
 NAME_ONLY_LABEL_REGEX = re.compile(
     r"^\s*"
     r"(?:name|full\s+name|holder\s+name|"
@@ -299,6 +318,7 @@ def classify_document(text_lines: List[str]) -> str:
         DOCUMENT_INVOICE: 0,
     }
 
+
     # ─────────────────────────────────────────────────────────
     # DRIVING LICENCE
     # ─────────────────────────────────────────────────────────
@@ -318,12 +338,14 @@ def classify_document(text_lines: List[str]) -> str:
     if DRIVING_LICENCE_REGEX.search(joined):
         scores[DOCUMENT_DRIVING_LICENCE] += 6
 
+
     # ─────────────────────────────────────────────────────────
     # PAN
     # ─────────────────────────────────────────────────────────
 
     if "income tax department" in joined:
         scores[DOCUMENT_PAN] += 8
+
     elif "income tax" in joined:
         scores[DOCUMENT_PAN] += 6
 
@@ -337,7 +359,9 @@ def classify_document(text_lines: List[str]) -> str:
         scores[DOCUMENT_PAN] += 6
 
     # A valid PAN-shaped candidate is supporting evidence.
+
     for line in text_lines:
+
         compact = re.sub(
             r"[^A-Za-z0-9]",
             "",
@@ -353,6 +377,7 @@ def classify_document(text_lines: List[str]) -> str:
     #
     # A bank statement, invoice or other financial document
     # may also contain the word "tax".
+
 
     # ─────────────────────────────────────────────────────────
     # AADHAAR
@@ -375,7 +400,9 @@ def classify_document(text_lines: List[str]) -> str:
 
     # If OCR missed "Aadhaar", a 12-digit number plus
     # Aadhaar-like contextual clues can still help.
+
     if AADHAAR_REGEX.search(joined):
+
         if any(
             clue in joined
             for clue in (
@@ -388,6 +415,7 @@ def classify_document(text_lines: List[str]) -> str:
             )
         ):
             scores[DOCUMENT_AADHAAR] += 5
+
 
     # ─────────────────────────────────────────────────────────
     # PASSPORT
@@ -408,6 +436,7 @@ def classify_document(text_lines: List[str]) -> str:
     if "nationality" in joined and "india" in joined:
         scores[DOCUMENT_PASSPORT] += 3
 
+
     # ─────────────────────────────────────────────────────────
     # VOTER ID
     # ─────────────────────────────────────────────────────────
@@ -427,6 +456,7 @@ def classify_document(text_lines: List[str]) -> str:
     if "epic no" in joined or "epic number" in joined:
         scores[DOCUMENT_VOTER_ID] += 7
 
+
     # ─────────────────────────────────────────────────────────
     # MARKSHEET / EDUCATION
     # ─────────────────────────────────────────────────────────
@@ -437,11 +467,24 @@ def classify_document(text_lines: List[str]) -> str:
     if "mark sheet" in joined:
         scores[DOCUMENT_MARKSHEET] += 8
 
+    # School report cards may not contain the word "marksheet".
+    if "report card" in joined:
+        scores[DOCUMENT_MARKSHEET] += 8
+
     if "statement of marks" in joined:
         scores[DOCUMENT_MARKSHEET] += 7
 
     if "marks statement" in joined:
         scores[DOCUMENT_MARKSHEET] += 7
+
+    if "academic performance" in joined:
+        scores[DOCUMENT_MARKSHEET] += 4
+
+    if "marks obtained" in joined:
+        scores[DOCUMENT_MARKSHEET] += 4
+
+    if "scholastic areas" in joined:
+        scores[DOCUMENT_MARKSHEET] += 4
 
     if "examination" in joined:
         scores[DOCUMENT_MARKSHEET] += 3
@@ -461,6 +504,7 @@ def classify_document(text_lines: List[str]) -> str:
         or "semester" in joined
     ):
         scores[DOCUMENT_MARKSHEET] += 4
+
 
     # ─────────────────────────────────────────────────────────
     # BANK STATEMENT
@@ -486,6 +530,7 @@ def classify_document(text_lines: List[str]) -> str:
 
     if "closing balance" in joined:
         scores[DOCUMENT_BANK_STATEMENT] += 4
+
 
     # ─────────────────────────────────────────────────────────
     # INSURANCE
@@ -515,6 +560,7 @@ def classify_document(text_lines: List[str]) -> str:
     if "sum assured" in joined:
         scores[DOCUMENT_INSURANCE] += 5
 
+
     # ─────────────────────────────────────────────────────────
     # SALARY SLIP
     # ─────────────────────────────────────────────────────────
@@ -542,6 +588,7 @@ def classify_document(text_lines: List[str]) -> str:
 
     if "employee id" in joined and "salary" in joined:
         scores[DOCUMENT_SALARY_SLIP] += 5
+
 
     # ─────────────────────────────────────────────────────────
     # INVOICE
@@ -571,6 +618,7 @@ def classify_document(text_lines: List[str]) -> str:
     if "gstin" in joined:
         scores[DOCUMENT_INVOICE] += 5
 
+
     # ─────────────────────────────────────────────────────────
     # Select strongest classification
     # ─────────────────────────────────────────────────────────
@@ -583,6 +631,7 @@ def classify_document(text_lines: List[str]) -> str:
     best_score = scores[best_type]
 
     # Require meaningful evidence.
+
     if best_score < 3:
         return DOCUMENT_UNKNOWN
 
@@ -594,6 +643,7 @@ def classify_document(text_lines: List[str]) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # OCR correction dictionaries.
+
 _ALPHA_SLOT_FIXES = {
     "8": "B",
     "0": "D",
@@ -620,7 +670,9 @@ _LAST_LETTER_FALLBACK = (
 )
 
 
-def _correct_pan_candidate(candidate: str) -> List[str]:
+def _correct_pan_candidate(
+    candidate: str,
+) -> List[str]:
     """
     Apply localized OCR corrections to a 10-character PAN candidate.
 
@@ -655,6 +707,7 @@ def _correct_pan_candidate(candidate: str) -> List[str]:
         ]
 
     # Otherwise try plausible OCR corrections.
+
     primary = _LAST_LETTER_BY_DIGIT.get(last)
 
     if primary is None:
@@ -768,6 +821,7 @@ def extract_aadhaar(
     """
 
     # First: exact extraction.
+
     for line in text_lines:
 
         match = AADHAAR_REGEX.search(line)
@@ -781,13 +835,16 @@ def extract_aadhaar(
             )
 
             if len(digits) == 12:
+
                 return (
                     f"{digits[:4]} "
                     f"{digits[4:8]} "
                     f"{digits[8:12]}"
                 )
 
+
     # Second: limited OCR-tolerant extraction.
+
     for line in text_lines:
 
         match = AADHAAR_FUZZY_REGEX.search(line)
@@ -812,6 +869,7 @@ def extract_aadhaar(
             )
 
             if len(digits) == 12:
+
                 return (
                     f"{digits[:4]} "
                     f"{digits[4:8]} "
@@ -1011,7 +1069,9 @@ def extract_issue_date(
 # 9. Name extraction
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _clean_name_candidate(name: str) -> str:
+def _clean_name_candidate(
+    name: str,
+) -> str:
     """
     Clean OCR noise from a possible document-holder name.
 
@@ -1022,13 +1082,25 @@ def _clean_name_candidate(name: str) -> str:
     name = name.strip()
 
     # Remove common OCR punctuation/noise.
-    name = re.sub(r"[^A-Za-z.' -]", " ", name)
+
+    name = re.sub(
+        r"[^A-Za-z.' -]",
+        " ",
+        name,
+    )
 
     # Collapse repeated whitespace.
-    name = " ".join(name.split())
 
-    # Remove stray apostrophes/hyphens from the beginning/end.
-    name = name.strip("' -.")
+    name = " ".join(
+        name.split()
+    )
+
+    # Remove stray apostrophes/hyphens
+    # from the beginning/end.
+
+    name = name.strip(
+        "' -."
+    )
 
     return name
 
@@ -1051,17 +1123,25 @@ def _is_plausible_name(
     words = line.split()
 
     # Name should contain 2-6 words.
-    if not (2 <= len(words) <= 6):
+
+    if not (
+        2 <= len(words) <= 6
+    ):
         return False
 
     # Names should not contain digits.
+
     if any(
-        any(ch.isdigit() for ch in word)
+        any(
+            ch.isdigit()
+            for ch in word
+        )
         for word in words
     ):
         return False
 
     # Remove punctuation for validation.
+
     normalized_words = []
 
     for word in words:
@@ -1075,9 +1155,12 @@ def _is_plausible_name(
         if not cleaned:
             return False
 
-        normalized_words.append(cleaned)
+        normalized_words.append(
+            cleaned
+        )
 
     # Every word should start with a letter.
+
     if not all(
         word[0].isalpha()
         for word in normalized_words
@@ -1087,6 +1170,7 @@ def _is_plausible_name(
     lowered = line.lower()
 
     # Reject document/system terms.
+
     if any(
         stop in lowered
         for stop in NAME_STOPWORDS
@@ -1094,6 +1178,7 @@ def _is_plausible_name(
         return False
 
     # Reject lines that are obviously too long.
+
     if len(line) > 80:
         return False
 
@@ -1129,13 +1214,18 @@ def extract_name(
         if name and _is_plausible_name(name):
             return name
 
+
     # ------------------------------------------------------------
     # 2. Name: on one line, actual name on next line
     # ------------------------------------------------------------
 
-    for index, line in enumerate(text_lines):
+    for index, line in enumerate(
+        text_lines
+    ):
 
-        if not NAME_ONLY_LABEL_REGEX.match(line):
+        if not NAME_ONLY_LABEL_REGEX.match(
+            line
+        ):
             continue
 
         for next_index in (
@@ -1143,15 +1233,20 @@ def extract_name(
             index + 2,
         ):
 
-            if next_index >= len(text_lines):
+            if next_index >= len(
+                text_lines
+            ):
                 continue
 
             candidate = _clean_name_candidate(
                 text_lines[next_index]
             )
 
-            if _is_plausible_name(candidate):
+            if _is_plausible_name(
+                candidate
+            ):
                 return candidate
+
 
     # ------------------------------------------------------------
     # 3. PAN-specific fallback
@@ -1165,11 +1260,17 @@ def extract_name(
 
         pan_candidates = []
 
-        for index, line in enumerate(text_lines):
+        for index, line in enumerate(
+            text_lines
+        ):
 
-            candidate = _clean_name_candidate(line)
+            candidate = _clean_name_candidate(
+                line
+            )
 
-            if not _is_plausible_name(candidate):
+            if not _is_plausible_name(
+                candidate
+            ):
                 continue
 
             words = candidate.split()
@@ -1177,6 +1278,7 @@ def extract_name(
             score = 0
 
             # Strong preference for normal alphabetic words.
+
             if all(
                 re.fullmatch(
                     r"[A-Za-z]+",
@@ -1187,14 +1289,17 @@ def extract_name(
                 score += 5
 
             # PAN holder names are often uppercase.
+
             if candidate.isupper():
                 score += 5
 
             # Prefer 2-3 word names.
+
             if 2 <= len(words) <= 3:
                 score += 3
 
             # Penalize suspiciously short words.
+
             if any(
                 len(word) <= 1
                 for word in words
@@ -1202,6 +1307,7 @@ def extract_name(
                 score -= 4
 
             # Penalize OCR punctuation/noise.
+
             if re.search(
                 r"[^A-Za-z ]",
                 candidate,
@@ -1209,11 +1315,16 @@ def extract_name(
                 score -= 5
 
             # Signature text should never win.
+
             if "signature" in candidate.lower():
                 score -= 20
 
             pan_candidates.append(
-                (score, index, candidate)
+                (
+                    score,
+                    index,
+                    candidate,
+                )
             )
 
         if pan_candidates:
@@ -1228,6 +1339,7 @@ def extract_name(
 
             return pan_candidates[0][2]
 
+
     # ------------------------------------------------------------
     # 4. Aadhaar-specific fallback
     #
@@ -1239,11 +1351,17 @@ def extract_name(
 
         aadhaar_candidates = []
 
-        for index, line in enumerate(text_lines):
+        for index, line in enumerate(
+            text_lines
+        ):
 
-            candidate = _clean_name_candidate(line)
+            candidate = _clean_name_candidate(
+                line
+            )
 
-            if not _is_plausible_name(candidate):
+            if not _is_plausible_name(
+                candidate
+            ):
                 continue
 
             words = candidate.split()
@@ -1251,6 +1369,7 @@ def extract_name(
             score = 0
 
             # A real name should consist of alphabetic words.
+
             if all(
                 re.fullmatch(
                     r"[A-Za-z]+",
@@ -1261,10 +1380,12 @@ def extract_name(
                 score += 6
 
             # Prefer 2-4 word names.
+
             if 2 <= len(words) <= 4:
                 score += 3
 
             # Prefer title case or uppercase.
+
             if candidate.isupper():
                 score += 3
 
@@ -1276,6 +1397,7 @@ def extract_name(
                 score += 3
 
             # Reject OCR symbols strongly.
+
             if re.search(
                 r"[^A-Za-z ]",
                 candidate,
@@ -1283,6 +1405,7 @@ def extract_name(
                 score -= 10
 
             # Very short words are often OCR noise.
+
             if any(
                 len(word) <= 1
                 for word in words
@@ -1290,7 +1413,11 @@ def extract_name(
                 score -= 5
 
             aadhaar_candidates.append(
-                (score, index, candidate)
+                (
+                    score,
+                    index,
+                    candidate,
+                )
             )
 
         if aadhaar_candidates:
@@ -1305,6 +1432,7 @@ def extract_name(
 
             return aadhaar_candidates[0][2]
 
+
     # ------------------------------------------------------------
     # 5. Generic fallback
     #
@@ -1314,9 +1442,13 @@ def extract_name(
 
     for line in text_lines:
 
-        candidate = _clean_name_candidate(line)
+        candidate = _clean_name_candidate(
+            line
+        )
 
-        if _is_plausible_name(candidate):
+        if _is_plausible_name(
+            candidate
+        ):
             return candidate
 
     return None
@@ -1362,7 +1494,10 @@ def extract_entities(
     # Clean OCR text
     # ─────────────────────────────────────────────
 
-    text_lines = clean_text(raw_text)
+    text_lines = clean_text(
+        raw_text
+    )
+
 
     # ─────────────────────────────────────────────
     # Classify document
@@ -1372,6 +1507,7 @@ def extract_entities(
         text_lines
     )
 
+
     # ─────────────────────────────────────────────
     # Extract dates
     # ─────────────────────────────────────────────
@@ -1379,6 +1515,7 @@ def extract_entities(
     dates = extract_dates(
         text_lines
     )
+
 
     # ─────────────────────────────────────────────
     # Extract document-specific ID
@@ -1404,11 +1541,13 @@ def extract_entities(
             text_lines
         )
 
+
     # ─────────────────────────────────────────────
     # Aggregate
     # ─────────────────────────────────────────────
 
     return {
+
         "Document_Type": doc_type,
 
         "ID_Number": id_number,
