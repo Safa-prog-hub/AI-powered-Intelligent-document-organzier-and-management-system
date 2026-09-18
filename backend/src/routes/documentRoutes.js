@@ -24,7 +24,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // Single-file upload: field name must be `file` (multer.single('file')).
-router.post('/upload', upload.single('file'), uploadDocument);
+router.post('/upload', upload.array('file',10), uploadDocument);
 
 // Smart search + listing: GET /api/documents?search=<text>&category=<cat>
 router.get('/', listDocuments);

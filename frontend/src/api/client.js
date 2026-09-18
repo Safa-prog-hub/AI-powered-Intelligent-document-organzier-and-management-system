@@ -73,9 +73,19 @@ export async function getDocument(id) {
  * @param {(pct: number) => void} onProgress - 0..100 while streaming to the gateway.
  * @returns {Promise<object>} The persisted, AI-enriched document.
  */
-export async function uploadDocument(file, onProgress) {
+/**
+ * Upload multiple documents with upload-progress tracking.
+ *
+ * @param {File[]} files
+ * @param {(pct: number) => void} onProgress - 0..100 while streaming to the gateway.
+ * @returns {Promise<object[]>} The persisted documents.
+ */
+export async function uploadDocument(files, onProgress) {
   const form = new FormData();
-  form.append('file', file);
+
+  for (const file of files) {
+    form.append('file', file);
+  }
 
   const { data } = await API.post('/documents/upload', form, {
     onUploadProgress: (event) => {
@@ -84,7 +94,8 @@ export async function uploadDocument(file, onProgress) {
       }
     },
   });
-  return data.document;
+
+  return data.documents;
 }
 
 /** Delete a document. */

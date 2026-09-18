@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   deleteDocument as apiDelete,
   fetchDocuments,
@@ -9,14 +17,9 @@ import {
 
 const DocumentContext = createContext(null);
 
-/**
- * Global document state (Phase 7):
- *  - documents   : the visible library (full list, or Smart Search results)
- *  - expiring    : documents expiring within 30 days
- *  - searchQuery : debounced Smart Search input (also sent to backend)
- *  - uploadState : { status: 'idle'|'uploading'|'processing'|'success'|'error',
- *                    progress, fileName, error }
- */
+const sleep = (ms) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export function DocumentProvider({ children }) {
   const [documents, setDocuments] = useState([]);
   const [expiring, setExpiring] = useState([]);
@@ -56,8 +59,7 @@ export function DocumentProvider({ children }) {
   }, [refresh]);
 
   /**
-   * Smart Search — replaces the visible library with MongoDB text-index
-   * results; an empty query restores the full list.
+   * Smart Search
    */
   const applySearch = useCallback(
     async (query) => {
@@ -86,114 +88,232 @@ export function DocumentProvider({ children }) {
   );
 
   /**
-   * Upload a document.
+   * Poll one document until processing finishes.
    *
-   * The backend now returns quickly with processingStatus = "processing".
-   * The AI service continues processing the document in the background.
+   * There is intentionally NO timeout here.
+   * AI processing can take longer depending on OCR,
+   * embeddings and document size.
+   */
+  const monitorDocument = useCallback(async (uploadedDoc) => {
+    while (true) {
+      await sleep(2000);
+
+      try {
+        const currentDoc = await getDocument(uploadedDoc._id);
+
+        // Automatically update the document in the library.
+        setDocuments((docs) => {
+          const exists = docs.some(
+            (doc) =>
+              String(doc._id) === String(currentDoc._id)
+          );
+
+          if (exists) {
+            return docs.map((doc) =>
+              String(doc._id) === String(currentDoc._id)
+                ? currentDoc
+                : doc
+            );
+          }
+
+          return [currentDoc, ...docs];
+        });
+
+        if (currentDoc.processingStatus === 'completed') {
+          return {
+            status: 'completed',
+            document: currentDoc,
+          };
+        }
+
+        if (currentDoc.processingStatus === 'failed') {
+          return {
+            status: 'failed',
+            document: currentDoc,
+          };
+        }
+      } catch (err) {
+        // A temporary frontend request failure should NOT
+        // mark the document as failed.
+        console.warn(
+          `[frontend] Could not check document ${uploadedDoc._id}:`,
+          err.message
+        );
+      }
+    }
+  }, []);
+
+  /**
+   * Upload multiple documents.
    *
-   * We poll the document every second until it becomes "completed"
-   * or "failed", then update the UI with the fully processed document.
+   * Upload completion and AI processing completion
+   * are treated as two separate things.
    */
   const upload = useCallback(
-    async (file) => {
+    async (files) => {
+      const fileList = Array.isArray(files) ? files : [files];
+
+      if (fileList.length === 0) {
+        return [];
+      }
+
+      const fileNames = fileList
+        .map((file) => file.name)
+        .join(', ');
+
       setUploadState({
         status: 'uploading',
         progress: 0,
-        fileName: file.name,
+        fileName: fileNames,
         error: null,
       });
 
       try {
-        // Upload the file to the backend.
-        const doc = await apiUpload(file, (pct) => {
-          setUploadState((s) =>
-            s.status === 'uploading'
-              ? { ...s, progress: pct }
-              : s
+        /**
+         * Send all selected files to the backend.
+         */
+        const uploadedDocs = await apiUpload(
+          fileList,
+          (pct) => {
+            setUploadState((state) =>
+              state.status === 'uploading'
+                ? {
+                  ...state,
+                  progress: pct,
+                }
+                : state
+            );
+          }
+        );
+
+        if (
+          !Array.isArray(uploadedDocs) ||
+          uploadedDocs.length === 0
+        ) {
+          throw new Error(
+            'No documents were created by the server.'
           );
+        }
+
+        /**
+         * Immediately add the newly uploaded documents
+         * to the library.
+         */
+        setDocuments((docs) => {
+          const newIds = new Set(
+            uploadedDocs.map((doc) => String(doc._id))
+          );
+
+          return [
+            ...uploadedDocs,
+            ...docs.filter(
+              (doc) => !newIds.has(String(doc._id))
+            ),
+          ];
         });
 
-        // The backend accepted the file.
-        // AI processing is now happening in the background.
+        /**
+         * Upload itself is now successful.
+         *
+         * AI processing continues independently.
+         */
         setUploadState({
           status: 'processing',
           progress: 100,
-          fileName: file.name,
+          fileName:
+            fileList.length === 1
+              ? fileList[0].name
+              : `${fileList.length} documents uploaded`,
           error: null,
         });
 
-        let processedDoc = doc;
+        /**
+         * Start independent background monitoring.
+         *
+         * We intentionally DO NOT await Promise.all here.
+         */
+        let completedCount = 0;
+        let hasFailed = false;
 
-        // Poll the backend once every second.
-        // Maximum: 30 attempts = approximately 30 seconds.
-        for (let attempt = 0; attempt < 30; attempt += 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        uploadedDocs.forEach((uploadedDoc) => {
+          void monitorDocument(uploadedDoc).then((result) => {
+            if (result.status === 'completed') {
+              setDocuments((docs) =>
+                docs.map((doc) =>
+                  String(doc._id) ===
+                    String(result.document._id)
+                    ? result.document
+                    : doc
+                )
+              );
+            }
 
-          processedDoc = await getDocument(doc._id);
+            if (result.status === 'failed') {
+              hasFailed = true;
 
-          if (processedDoc.processingStatus === 'completed') {
-            break;
-          }
+              setDocuments((docs) =>
+                docs.map((doc) =>
+                  String(doc._id) ===
+                    String(result.document._id)
+                    ? result.document
+                    : doc
+                )
+              );
+            }
 
-          if (processedDoc.processingStatus === 'failed') {
-            throw new Error(
-              processedDoc.processingError ||
-                'Document processing failed.'
-            );
-          }
-        }
+            completedCount += 1;
 
-        // If processing did not finish within 30 seconds,
-        // show an error instead of displaying incomplete data.
-        if (processedDoc.processingStatus !== 'completed') {
-          throw new Error(
-            'Document processing is taking too long. Please refresh.'
-          );
-        }
-
-        // Add the fully processed document to the top of the library.
-        // Remove any older copy of the same document first.
-        setDocuments((docs) => [
-          processedDoc,
-          ...docs.filter((d) => d._id !== processedDoc._id),
-        ]);
-
-        setUploadState({
-          status: 'success',
-          progress: 100,
-          fileName: file.name,
-          error: null,
+            // All documents have finished processing.
+            if (completedCount === uploadedDocs.length) {
+              setUploadState((state) => ({
+                ...state,
+                status: hasFailed ? 'error' : 'success',
+                progress: 100,
+                error: hasFailed
+                  ? 'One or more documents failed during AI processing.'
+                  : null,
+              }));
+            }
+          });
         });
 
-        return processedDoc;
+        /**
+         * Return immediately after the server has accepted
+         * the files.
+         */
+        return uploadedDocs;
       } catch (err) {
         setUploadState({
           status: 'error',
           progress: 0,
-          fileName: file.name,
+          fileName: fileNames,
           error: err.message,
         });
 
         throw err;
       }
     },
-    []
+    [monitorDocument]
   );
 
-  const remove = useCallback(
-    async (id) => {
-      await apiDelete(id);
+  /**
+   * Delete document.
+   */
+  const remove = useCallback(async (id) => {
+    await apiDelete(id);
 
-      setDocuments((docs) =>
-        docs.filter((d) => d._id !== id)
-      );
+    setDocuments((docs) =>
+      docs.filter(
+        (doc) => String(doc._id) !== String(id)
+      )
+    );
 
-      setExpiring((docs) =>
-        docs.filter((d) => d._id !== id)
-      );
-    },
-    []
-  );
+    setExpiring((docs) =>
+      docs.filter(
+        (doc) => String(doc._id) !== String(id)
+      )
+    );
+  }, []);
 
   const value = useMemo(
     () => ({
