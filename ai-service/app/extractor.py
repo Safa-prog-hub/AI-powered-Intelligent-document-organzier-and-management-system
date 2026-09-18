@@ -1172,8 +1172,11 @@ def _is_plausible_name(
     # Reject document/system terms.
 
     if any(
-        stop in lowered
-        for stop in NAME_STOPWORDS
+    re.search(
+        rf"\b{re.escape(stop)}\b",
+        lowered,
+    )
+    for stop in NAME_STOPWORDS
     ):
         return False
 
@@ -1195,7 +1198,34 @@ def extract_name(
     Uses document-specific strategies first, followed by
     the existing generic fallback.
     """
+    #    # ------------------------------------------------------------
+    # Marksheet-specific name extraction
+    #
+    # Example OCR:
+    # Student Name _ : Shri Narayan Pandey DOB : 24-06-2005
+    # ------------------------------------------------------------
 
+    # ------------------------------------------------------------
+
+    if document_type == DOCUMENT_MARKSHEET:
+
+        for line in text_lines:
+
+            match = re.search(
+                r"Student\s+Name\s*[_-]?\s*:\s*(.*?)(?=\s+DOB\b|\s+Date\s+of\s+Birth\b|$)",
+                line,
+                re.IGNORECASE,
+            )
+
+            if not match:
+                continue
+
+            candidate = _clean_name_candidate(
+                match.group(1)
+            )
+
+            if _is_plausible_name(candidate):
+                return candidate
     # ------------------------------------------------------------
     # 1. Explicit Name: Rahul Sharma
     # ------------------------------------------------------------
@@ -1432,9 +1462,11 @@ def extract_name(
 
             return aadhaar_candidates[0][2]
 
+        # ------------------------------------------------------------
+    
 
     # ------------------------------------------------------------
-    # 5. Generic fallback
+    # 6. Generic fallback
     #
     # Keep the original behaviour for other document types
     # and existing tests.
