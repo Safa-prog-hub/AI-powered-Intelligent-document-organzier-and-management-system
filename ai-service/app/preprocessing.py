@@ -169,7 +169,32 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
 
 
 # ── PDF support ───────────────────────────────────────────────────────────
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+    """
+    Extract selectable text directly from a PDF.
 
+    Returns:
+        Combined text from all PDF pages.
+    """
+    try:
+        document = pymupdf.open(stream=file_bytes, filetype="pdf")
+    except Exception as exc:
+        raise InvalidImageError(
+            f"Could not parse PDF: {exc}"
+        ) from exc
+
+    try:
+        text_parts = []
+
+        for page in document:
+            text = page.get_text("text")
+            if text and text.strip():
+                text_parts.append(text.strip())
+
+        return "\n".join(text_parts)
+
+    finally:
+        document.close()
 
 def pdf_bytes_to_matrices(file_bytes: bytes) -> List[np.ndarray]:
     """

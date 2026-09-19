@@ -55,6 +55,10 @@ DOCUMENT_DRIVING_LICENCE = "Driving Licence"
 DOCUMENT_PASSPORT = "Passport"
 DOCUMENT_VOTER_ID = "Voter ID"
 DOCUMENT_MARKSHEET = "Marksheet"
+DOCUMENT_STUDY_PLAN = "Study Plan"
+DOCUMENT_STUDY_STRATEGY = "Study Strategy"
+DOCUMENT_STUDY_MATERIAL = "Study Material"
+DOCUMENT_ASSIGNMENT = "Assignment"
 DOCUMENT_BANK_STATEMENT = "Bank Statement"
 DOCUMENT_INSURANCE = "Insurance"
 DOCUMENT_SALARY_SLIP = "Salary Slip"
@@ -314,6 +318,10 @@ def classify_document(text_lines: List[str]) -> str:
         DOCUMENT_PASSPORT: 0,
         DOCUMENT_VOTER_ID: 0,
         DOCUMENT_MARKSHEET: 0,
+        DOCUMENT_STUDY_PLAN: 0,
+        DOCUMENT_STUDY_STRATEGY: 0,
+        DOCUMENT_STUDY_MATERIAL: 0,
+        DOCUMENT_ASSIGNMENT: 0,
         DOCUMENT_BANK_STATEMENT: 0,
         DOCUMENT_INSURANCE: 0,
         DOCUMENT_SALARY_SLIP: 0,
@@ -488,25 +496,52 @@ def classify_document(text_lines: List[str]) -> str:
     if "scholastic areas" in joined:
         scores[DOCUMENT_MARKSHEET] += 4
 
-    if "examination" in joined:
-        scores[DOCUMENT_MARKSHEET] += 3
-
-    if "semester" in joined:
-        scores[DOCUMENT_MARKSHEET] += 3
-
-    if "cgpa" in joined:
-        scores[DOCUMENT_MARKSHEET] += 4
-
-    if "percentage" in joined:
-        scores[DOCUMENT_MARKSHEET] += 3
-
     if "university" in joined and (
         "marks" in joined
         or "result" in joined
-        or "semester" in joined
     ):
         scores[DOCUMENT_MARKSHEET] += 4
+    
+        # ─────────────────────────────────────────────────────────
+    # EDUCATION: STUDY PLAN / STRATEGY / MATERIAL / ASSIGNMENT
+    # ─────────────────────────────────────────────────────────
+    if "study strategy" in joined:
+        scores[DOCUMENT_STUDY_STRATEGY] += 8
 
+    if "study plan" in joined:
+        scores[DOCUMENT_STUDY_PLAN] += 8
+
+    if "study material" in joined:
+        scores[DOCUMENT_STUDY_MATERIAL] += 8
+
+    if "assignment" in joined:
+        scores[DOCUMENT_ASSIGNMENT] += 8
+
+    if "timetable" in joined and (
+        "study" in joined
+        or "college" in joined
+        or "exam" in joined
+    ):
+        scores[DOCUMENT_STUDY_PLAN] += 5
+
+    if "preparation plan" in joined:
+        scores[DOCUMENT_STUDY_PLAN] += 6
+
+    if (
+        "strategy" in joined
+        and (
+            "study" in joined
+            or "college" in joined
+            or "exam" in joined
+            or "coding" in joined
+            or "networking" in joined
+            or "aptitude" in joined
+            or "learning" in joined
+            or "preparation" in joined
+            or "vacation" in joined
+        )
+    ):
+        scores[DOCUMENT_STUDY_STRATEGY] += 6
 
     # ─────────────────────────────────────────────────────────
     # BANK STATEMENT
