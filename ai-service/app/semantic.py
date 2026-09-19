@@ -233,9 +233,18 @@ def generate_filename(metadata: Dict) -> str:
     name = metadata.get("Name") or metadata.get("name") or "Untitled"
     extension = metadata.get("extension") or "jpg"
 
-    raw = f"{doc_type}_{name}_{datetime.now().strftime('%Y-%m-%d')}"
-    # Replace whitespace runs with underscores, then strip unsafe chars.
+    if doc_type in {
+        "PAN",
+        "Aadhaar",
+        "Marksheet",
+        "Driving Licence",
+    }:
+        raw = f"{doc_type}_{name}_{datetime.now().strftime('%Y-%m-%d')}"
+    else:
+        raw = f"{doc_type}_{datetime.now().strftime('%Y-%m-%d')}"
+
+# Replace whitespace runs with underscores, then strip unsafe chars.
     sanitized = re.sub(r"\s+", "_", raw.strip())
-    sanitized = re.sub(r"[^A-Za-z0-9_.\-]", "", sanitized)
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]", "", sanitized)
     sanitized = sanitized[:200].strip("_")
     return f"{sanitized}.{extension.lstrip('.').lower()}"

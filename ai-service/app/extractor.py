@@ -171,6 +171,7 @@ NAME_LABEL_REGEX = re.compile(
     r"policy\s*holder\s+name|insured\s+name|"
     r"employee\s+name|given\s+name(?:s)?|"
     r"applicant\s+name)"
+    # r"candidate(?:'s)?\s+full\s+name(?:\s*\([^)]*\))?|"
     r"\s*[:.\-]?\s*(.*?)\s*$",
     re.IGNORECASE,
 )
@@ -185,6 +186,7 @@ NAME_ONLY_LABEL_REGEX = re.compile(
     r"policy\s*holder\s+name|insured\s+name|"
     r"employee\s+name|given\s+name(?:s)?|"
     r"applicant\s+name)"
+    # r"candidate(?:'s)?\s+full\s+name(?:\s*\([^)]*\))?|"
     r"\s*[:.\-]?\s*$",
     re.IGNORECASE,
 )
@@ -1226,6 +1228,25 @@ def extract_name(
 
             if _is_plausible_name(candidate):
                 return candidate
+    # Candidate's Full Name format
+    if document_type == DOCUMENT_MARKSHEET:
+
+        for i, line in enumerate(text_lines):
+
+            if re.search(
+                r"candidate(?:'s|s)?\s+full\s+name",
+                line,
+                re.IGNORECASE,
+            ):
+
+                if i + 1 < len(text_lines):
+
+                    candidate = _clean_name_candidate(
+                        text_lines[i + 1]
+                    )
+
+                    if _is_plausible_name(candidate):
+                        return candidate
     # ------------------------------------------------------------
     # 1. Explicit Name: Rahul Sharma
     # ------------------------------------------------------------
@@ -1463,8 +1484,42 @@ def extract_name(
             return aadhaar_candidates[0][2]
 
         # ------------------------------------------------------------
-    
+    # Passport name format
+    # Passport name format
+    if document_type == DOCUMENT_PASSPORT:
 
+        surname = None
+        given_names = None
+
+        for i, line in enumerate(text_lines):
+
+            if re.search(
+                r"name\s*/\s*nom",
+                line,
+                re.IGNORECASE,
+            ):
+                if i + 1 < len(text_lines):
+
+                    candidate = _clean_name_candidate(
+                        text_lines[i + 1]
+                    )
+
+                    if re.fullmatch(
+                        r"[A-Za-z]+(?:[ .'-][A-Za-z]+){0,5}",
+                        candidate,
+                    ):
+                        surname = candidate,
+                        given_names=candidate
+
+    # Combine only after checking all lines
+            if surname and given_names:
+                return f"{surname} {given_names}"
+
+            if surname:
+                return surname
+
+            if given_names:
+                return given_names
     # ------------------------------------------------------------
     # 6. Generic fallback
     #

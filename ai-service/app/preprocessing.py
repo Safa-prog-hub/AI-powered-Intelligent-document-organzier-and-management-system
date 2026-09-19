@@ -22,6 +22,7 @@ from typing import List
 import cv2
 import numpy as np
 from pdf2image import convert_from_bytes
+import pymupdf
 
 
 # ── Tunable pipeline constants ────────────────────────────────────────────
