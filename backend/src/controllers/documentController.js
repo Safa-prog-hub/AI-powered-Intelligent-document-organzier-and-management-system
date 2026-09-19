@@ -58,6 +58,7 @@ async function processDocumentInBackground({
       },
       {
         $set: {
+          documentType: aiResult.documentType || 'Unknown',
           extractedText: aiResult.extractedText || '',
           tags: Array.isArray(aiResult.tags) ? aiResult.tags : [],
           embedding: aiResult.embedding || undefined,

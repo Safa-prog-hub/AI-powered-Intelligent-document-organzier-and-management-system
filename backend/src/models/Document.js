@@ -137,6 +137,13 @@ const documentSchema = new Schema(
       default: null,
       maxlength: 1000,
     },
+    /** Specific document type classified by the Python AI service. */
+    documentType: {
+      type: String,
+      default: 'Unknown',
+      trim: true,
+      maxlength: 64,
+    },
 
     /** Structured entities extracted by the Python microservice. */
     metadata: {

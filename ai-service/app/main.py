@@ -57,7 +57,14 @@ CATEGORY_BY_TYPE = {
     "Study Strategy": "Education",
     "Study Material": "Education",
     "Assignment": "Education",
+    "Certificate": "Education",
+    "Resume": "Education",
+    "CV": "Education",
+    "Form": "Others",
+    "Report": "Education",
 
+    # General
+    "Form": "Others",
     # Finance
     "PAN": "Finance",
     "Bank Statement": "Finance",

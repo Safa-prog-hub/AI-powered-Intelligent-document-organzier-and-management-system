@@ -55,6 +55,11 @@ DOCUMENT_DRIVING_LICENCE = "Driving Licence"
 DOCUMENT_PASSPORT = "Passport"
 DOCUMENT_VOTER_ID = "Voter ID"
 DOCUMENT_MARKSHEET = "Marksheet"
+DOCUMENT_CERTIFICATE = "Certificate"
+DOCUMENT_RESUME = "Resume"
+DOCUMENT_CV = "CV"
+DOCUMENT_FORM = "Form"
+DOCUMENT_REPORT = "Report"
 DOCUMENT_STUDY_PLAN = "Study Plan"
 DOCUMENT_STUDY_STRATEGY = "Study Strategy"
 DOCUMENT_STUDY_MATERIAL = "Study Material"
@@ -318,6 +323,11 @@ def classify_document(text_lines: List[str]) -> str:
         DOCUMENT_PASSPORT: 0,
         DOCUMENT_VOTER_ID: 0,
         DOCUMENT_MARKSHEET: 0,
+        DOCUMENT_CERTIFICATE: 0,
+        DOCUMENT_RESUME:0,
+        DOCUMENT_CV:0,
+        DOCUMENT_REPORT: 0,
+        DOCUMENT_FORM:0,
         DOCUMENT_STUDY_PLAN: 0,
         DOCUMENT_STUDY_STRATEGY: 0,
         DOCUMENT_STUDY_MATERIAL: 0,
@@ -501,7 +511,152 @@ def classify_document(text_lines: List[str]) -> str:
         or "result" in joined
     ):
         scores[DOCUMENT_MARKSHEET] += 4
+        
+    # Certificate
+    if "certificate" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 6
+    # "Secondary School Certificate" inside a resume is
+# an educational qualification, not a certificate document.
+    if "secondary school certificate" in joined:
+        scores[DOCUMENT_CERTIFICATE] -= 5
+
+    if "ssc" in joined and "education" in joined:
+        scores[DOCUMENT_CERTIFICATE] -= 3
+
+    if "certificate of completion" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 4
+
+    if "certificate of participation" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 4
+
+    if "certificate of achievement" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 4
+
+    if "certified that" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 4
+
+    if "this is to certify" in joined:
+        scores[DOCUMENT_CERTIFICATE] += 4
     
+    
+    # Resume / CV
+    if "resume" in joined:
+        scores[DOCUMENT_RESUME] += 10
+
+    if "curriculum vitae" in joined:
+        scores[DOCUMENT_CV] += 10
+
+    if re.search(r"\bcv\b", joined):
+        scores[DOCUMENT_CV] += 10
+
+# Strong resume structure indicators
+    if "career objective" in joined:
+        scores[DOCUMENT_RESUME] += 5
+
+    if "career summary" in joined:
+        scores[DOCUMENT_RESUME] += 5
+
+    if "professional summary" in joined:
+        scores[DOCUMENT_RESUME] += 5
+
+    if "technical skills" in joined:
+        scores[DOCUMENT_RESUME] += 4
+
+    if "work experience" in joined:
+        scores[DOCUMENT_RESUME] += 4
+
+    if "internship experience" in joined:
+        scores[DOCUMENT_RESUME] += 4
+
+    if "internship and workshop" in joined:
+        scores[DOCUMENT_RESUME] += 4
+
+    if "educational qualifications" in joined:
+        scores[DOCUMENT_RESUME] += 3
+
+    if "projects" in joined:
+        scores[DOCUMENT_RESUME] += 3
+
+    if "soft skills" in joined:
+        scores[DOCUMENT_RESUME] += 3
+
+    if "declaration" in joined:
+        scores[DOCUMENT_RESUME] += 2
+
+# Supporting resume indicators
+    if "programming languages" in joined:
+        scores[DOCUMENT_RESUME] += 2
+
+    if "linkedin" in joined:
+        scores[DOCUMENT_RESUME] += 2
+
+    if "career objective" in joined and "technical skills" in joined:
+        scores[DOCUMENT_RESUME] += 4
+
+    if "education" in joined and "projects" in joined and "technical skills" in joined:
+        scores[DOCUMENT_RESUME] += 5
+    if "post applied for" in joined:
+        scores[DOCUMENT_RESUME] += 5
+
+    if "educational qualification" in joined:
+        scores[DOCUMENT_RESUME] += 3
+
+    if "work experience" in joined and "educational qualification" in joined:
+        scores[DOCUMENT_RESUME] += 5
+
+    if "declaration" in joined and "work experience" in joined:
+        scores[DOCUMENT_RESUME] += 3
+    
+    # Forms
+    if "application form" in joined:
+        scores[DOCUMENT_FORM] += 8
+
+    if "registration form" in joined:
+        scores[DOCUMENT_FORM] += 8
+
+    if "admission form" in joined:
+        scores[DOCUMENT_FORM] += 8
+
+    if "application" in joined and "form" in joined:
+        scores[DOCUMENT_FORM] += 6
+
+    if "registration" in joined and "form" in joined:
+        scores[DOCUMENT_FORM] += 6
+
+    if "form no" in joined:
+        scores[DOCUMENT_FORM] += 4
+
+    if "form number" in joined:
+        scores[DOCUMENT_FORM] += 4
+
+    if "date of birth" in joined and "signature" in joined and "form" in joined:
+        scores[DOCUMENT_FORM] += 4
+    
+    
+    # Reports
+    if "project report" in joined:
+        scores[DOCUMENT_REPORT] += 8
+
+    if "technical report" in joined:
+        scores[DOCUMENT_REPORT] += 8
+
+    if "research report" in joined:
+        scores[DOCUMENT_REPORT] += 8
+
+    if "internship report" in joined:
+        scores[DOCUMENT_REPORT] += 8
+
+    if "progress report" in joined:
+        scores[DOCUMENT_REPORT] += 7
+
+    if "annual report" in joined:
+        scores[DOCUMENT_REPORT] += 7
+
+    if "report on" in joined:
+        scores[DOCUMENT_REPORT] += 4
+
+    if "final report" in joined:
+        scores[DOCUMENT_REPORT] += 5
         # ─────────────────────────────────────────────────────────
     # EDUCATION: STUDY PLAN / STRATEGY / MATERIAL / ASSIGNMENT
     # ─────────────────────────────────────────────────────────
