@@ -102,5 +102,18 @@ export async function uploadDocument(files, onProgress) {
 export async function deleteDocument(id) {
   await API.delete(`/documents/${id}`);
 }
+export async function renameDocument(id, name) {
+  const { data } = await API.patch(`/documents/${id}/rename`, {
+    name,
+  });
 
+  return data.document;
+}
+export async function getDocumentFile(id) {
+  const response = await API.get(`/documents/${id}/file`, {
+    responseType: 'blob',
+  });
+
+  return response.data;
+}
 export default API;

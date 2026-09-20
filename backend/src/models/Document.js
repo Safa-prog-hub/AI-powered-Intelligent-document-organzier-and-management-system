@@ -18,7 +18,13 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 /** Enum of high-level document categories produced by the classifier. */
-const DOCUMENT_CATEGORIES = ['ID Proof', 'Education', 'Finance', 'Insurance', 'Others'];
+const DOCUMENT_CATEGORIES = [
+  'ID Proof',
+  'Education',
+  'Finance',
+  'Insurance',
+  'Others',
+];
 
 /**
  * Nested metadata document holding the structured entities extracted by the
@@ -68,6 +74,19 @@ const metadataSchema = new Schema(
       trim: true,
       maxlength: 255,
     },
+
+    /**
+     * Optional filename chosen manually by the user.
+     *
+     * If this is null, the frontend continues to display the
+     * AI-generated filename.
+     */
+    customFilename: {
+      type: String,
+      default: null,
+      trim: true,
+      maxlength: 200,
+    },
   },
   { _id: false }
 );
@@ -103,7 +122,11 @@ const documentSchema = new Schema(
       required: true,
       trim: true,
       enum: {
-        values: ['image/jpeg', 'image/png', 'application/pdf'],
+        values: [
+          'image/jpeg',
+          'image/png',
+          'application/pdf',
+        ],
         message: '{VALUE} is not an allowed upload MIME type',
       },
     },
@@ -137,6 +160,7 @@ const documentSchema = new Schema(
       default: null,
       maxlength: 1000,
     },
+
     /** Specific document type classified by the Python AI service. */
     documentType: {
       type: String,
@@ -210,19 +234,16 @@ documentSchema.index({
 });
 
 /**
- * Search a user's documents using the MongoDB text index.
- *
- * @param {string} userId - Owner ObjectId (string form).
- * @param {string} query - Raw search string.
- * @param {object} [opts] - { limit, skip } pagination options.
- * @returns {Promise<Array>} documents sorted by text-match relevance.
- */
-/**
  * Smart search for a user's documents.
  *
  * Document-type searches use documentType/tags first.
  * Other searches can also match structured metadata and OCR text.
  * Matching is case-insensitive.
+ *
+ * @param {string} userId - Owner ObjectId (string form).
+ * @param {string} query - Raw search string.
+ * @param {object} [opts] - { limit, skip } pagination options.
+ * @returns {Promise<Array>} matching documents.
  */
 documentSchema.statics.textSearch = function textSearch(
   userId,
@@ -235,7 +256,9 @@ documentSchema.statics.textSearch = function textSearch(
 
   if (!searchTerm) {
     return this.find({
-      userId: mongoose.Types.ObjectId.createFromHexString(String(userId)),
+      userId: mongoose.Types.ObjectId.createFromHexString(
+        String(userId)
+      ),
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -243,9 +266,10 @@ documentSchema.statics.textSearch = function textSearch(
       .lean();
   }
 
-  const userObjectId = mongoose.Types.ObjectId.createFromHexString(
-    String(userId)
-  );
+  const userObjectId =
+    mongoose.Types.ObjectId.createFromHexString(
+      String(userId)
+    );
 
   const DOCUMENT_TYPES = [
     'PAN',
@@ -270,19 +294,21 @@ documentSchema.statics.textSearch = function textSearch(
   ];
 
   const normalize = (value) =>
-    String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+    String(value)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
 
   const normalizedSearch = normalize(searchTerm);
 
-  /*
+  /**
    * Check whether the user is searching for a document type.
    *
    * Examples:
-   *   pan       -> PAN
-   *   PAN       -> PAN
-   *   resume    -> Resume
-   *   drivinglicence -> Driving Licence
-   *   aadhar    -> Aadhaar
+   *   pan              -> PAN
+   *   PAN              -> PAN
+   *   resume           -> Resume
+   *   drivinglicence   -> Driving Licence
+   *   aadhar           -> Aadhaar
    */
   const matchedType = DOCUMENT_TYPES.find((type) => {
     const normalizedType = normalize(type);
@@ -302,7 +328,7 @@ documentSchema.statics.textSearch = function textSearch(
     return false;
   });
 
-  /*
+  /**
    * If the query is a known document type, search only
    * documentType and tags.
    *
@@ -311,8 +337,13 @@ documentSchema.statics.textSearch = function textSearch(
    *   ID  -> "E-Mail ID" in a Resume
    */
   if (matchedType) {
+    const escapedType = matchedType.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      '\\$&'
+    );
+
     const typeRegex = new RegExp(
-      `^${matchedType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+      `^${escapedType}$`,
       'i'
     );
 
@@ -329,7 +360,7 @@ documentSchema.statics.textSearch = function textSearch(
       .lean();
   }
 
-  /*
+  /**
    * "ID" is too generic to search through OCR.
    * Treat it as an ID-document search instead.
    */
@@ -342,6 +373,7 @@ documentSchema.statics.textSearch = function textSearch(
         { documentType: /^Driving Licence$/i },
         { documentType: /^Passport$/i },
         { documentType: /^Voter ID$/i },
+
         { tags: /^Aadhaar$/i },
         { tags: /^PAN$/i },
         { tags: /^Driving Licence$/i },
@@ -355,11 +387,15 @@ documentSchema.statics.textSearch = function textSearch(
       .lean();
   }
 
-  /*
+  /**
    * For names, ID numbers, filenames, categories and
    * normal text searches, use the broader search.
    */
-  const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedTerm = searchTerm.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+
   const regex = new RegExp(escapedTerm, 'i');
 
   return this.find({
@@ -371,6 +407,7 @@ documentSchema.statics.textSearch = function textSearch(
       { 'metadata.name': regex },
       { 'metadata.idNumber': regex },
       { 'metadata.autoGeneratedFilename': regex },
+      { 'metadata.customFilename': regex },
       { originalFilename: regex },
       { extractedText: regex },
     ],
@@ -381,4 +418,7 @@ documentSchema.statics.textSearch = function textSearch(
     .lean();
 };
 
-module.exports = mongoose.model('Document', documentSchema);
+module.exports = mongoose.model(
+  'Document',
+  documentSchema
+);

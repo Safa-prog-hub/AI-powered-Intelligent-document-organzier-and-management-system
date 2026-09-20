@@ -344,6 +344,66 @@ async function getDocument(req, res, next) {
     return next(err);
   }
 }
+/**
+ * GET /api/documents/:id/file
+ *
+ * Streams the original uploaded file for preview.
+ * Only the document owner can access it.
+ */
+async function viewDocumentFile(req, res, next) {
+  try {
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.userId,
+    }).lean();
+
+    if (!document) {
+      return res.status(404).json({
+        error: 'Document not found.',
+      });
+    }
+
+    const filePath = document.storagePath;
+
+    if (!filePath) {
+      return res.status(404).json({
+        error: 'File path is not available.',
+      });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        error: 'Uploaded file no longer exists.',
+      });
+    }
+
+    const extension = path
+      .extname(filePath)
+      .toLowerCase();
+
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
+      '.pdf': 'application/pdf',
+    };
+
+    const contentType =
+      mimeTypes[extension] || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Content-Disposition',
+      'inline'
+    );
+
+    return res.sendFile(path.resolve(filePath));
+  } catch (err) {
+    return next(err);
+  }
+}
 
 /**
  * DELETE /api/documents/:id
@@ -378,12 +438,83 @@ async function deleteDocument(req, res, next) {
     return next(err);
   }
 }
+/**
+ * PATCH /api/documents/:id/rename
+ *
+ * Rename a document without changing the actual stored file.
+ *
+ * The user's custom name is stored separately from the AI-generated
+ * filename so the original AI result is preserved.
+ */
+async function renameDocument(req, res, next) {
+  try {
+    const { name } = req.body;
+
+    const customFilename = String(name || '').trim();
+
+    if (!customFilename) {
+      return res.status(400).json({
+        error: 'A filename is required.',
+      });
+    }
+
+    if (customFilename.length > 200) {
+      return res.status(400).json({
+        error: 'Filename must be 200 characters or fewer.',
+      });
+    }
+
+    // Prevent path traversal and filesystem separators.
+    const sanitizedFilename = customFilename
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+      .trim();
+
+    if (!sanitizedFilename) {
+      return res.status(400).json({
+        error: 'Filename contains no valid characters.',
+      });
+    }
+
+    const document = await Document.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        userId: req.userId,
+      },
+      {
+        $set: {
+          'metadata.customFilename': sanitizedFilename,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).lean();
+
+    if (!document) {
+      return res.status(404).json({
+        error: 'Document not found.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Document renamed successfully.',
+      document,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 
 module.exports = {
   uploadDocument,
   listDocuments,
   listExpiring,
   getDocument,
+  viewDocumentFile,
   deleteDocument,
+  renameDocument,
   EXPIRY_WINDOW_DAYS,
 };

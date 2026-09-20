@@ -12,6 +12,7 @@ import {
   fetchDocuments,
   fetchExpiring,
   getDocument,
+  renameDocument,
   uploadDocument as apiUpload,
 } from '../api/client';
 import { showNotification } from '../services/notifications.js';
@@ -354,6 +355,27 @@ export function DocumentProvider({ children }) {
     );
   }, []);
 
+  const rename = useCallback(async (id, name) => {
+  const updatedDocument = await renameDocument(id, name);
+
+  setDocuments((docs) =>
+    docs.map((doc) =>
+      String(doc._id) === String(id)
+        ? updatedDocument
+        : doc
+    )
+  );
+
+  setExpiring((docs) =>
+    docs.map((doc) =>
+      String(doc._id) === String(id)
+        ? updatedDocument
+        : doc
+    )
+  );
+
+  return updatedDocument;
+}, []);
   const value = useMemo(
     () => ({
       documents,
@@ -366,6 +388,7 @@ export function DocumentProvider({ children }) {
       uploadState,
       upload,
       remove,
+      rename,
       refresh,
     }),
     [

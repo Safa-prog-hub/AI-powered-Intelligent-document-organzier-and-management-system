@@ -16,6 +16,8 @@ const {
   listExpiring,
   getDocument,
   deleteDocument,
+  renameDocument,
+  viewDocumentFile,
 } = require('../controllers/documentController');
 
 const router = express.Router();
@@ -32,6 +34,8 @@ router.get('/', listDocuments);
 // Expiry alerts (30-day window) — must be registered before '/:id'.
 router.get('/expiring', listExpiring);
 
+router.patch('/:id/rename', renameDocument);
+router.get('/:id/file', viewDocumentFile);
 router.get('/:id', getDocument);
 router.delete('/:id', deleteDocument);
 

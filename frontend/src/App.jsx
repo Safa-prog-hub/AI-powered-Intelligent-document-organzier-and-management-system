@@ -27,7 +27,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           {/* Main column — upload matrix + document library */}
           <main className="space-y-6">
             <UploadZone />
