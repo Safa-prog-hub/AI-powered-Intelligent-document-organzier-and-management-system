@@ -166,6 +166,37 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
     )
 
     return binary
+def preprocess_image_grayscale(image: np.ndarray) -> np.ndarray:
+    """
+    Prepare an image for OCR while preserving grayscale details.
+
+    Unlike preprocess_image(), this version does not apply
+    thresholding. It is useful for documents where small text
+    details may be lost during binarization.
+
+    Args:
+        image: BGR image matrix.
+
+    Returns:
+        Upscaled grayscale image matrix.
+    """
+
+    # 1. Resolution enhancement — double the image dimensions.
+    upscaled = cv2.resize(
+        image,
+        None,
+        fx=UPSCALE_FACTOR,
+        fy=UPSCALE_FACTOR,
+        interpolation=cv2.INTER_CUBIC,
+    )
+
+    # 2. Convert BGR → grayscale.
+    gray = cv2.cvtColor(
+        upscaled,
+        cv2.COLOR_BGR2GRAY,
+    )
+
+    return gray
 
 
 # ── PDF support ───────────────────────────────────────────────────────────

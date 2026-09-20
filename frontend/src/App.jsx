@@ -5,7 +5,7 @@ import Navbar from './components/Navbar.jsx';
 import UploadZone from './components/UploadZone.jsx';
 import DocumentGrid from './components/DocumentGrid.jsx';
 import ExpiryAlerts from './components/ExpiryAlerts.jsx';
-
+import { requestNotificationPermission, showNotification } from './services/notifications.js';
 /** Restore a previous session from localStorage (if any). */
 function getStoredUser() {
   try {
@@ -50,9 +50,13 @@ export default function App() {
   if (!user) {
     return (
       <AuthScreen
-        onAuthenticated={(u) => {
+        onAuthenticated={async (u) => {
           localStorage.setItem('doc_organizer_user', JSON.stringify(u));
           setUser(u);
+          await requestNotificationPermission();
+          showNotification('ROSP Test Notification', {
+            body: 'System notifications are working successfully! 🔔',
+          });
         }}
       />
     );

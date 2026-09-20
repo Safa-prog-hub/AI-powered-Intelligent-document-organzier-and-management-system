@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import List, Optional
-
+from datetime import datetime
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -246,6 +246,43 @@ async def process_document(
             binary = preprocessing.preprocess_image(image)
 
             raw_text = await ocr.extract_text(binary)
+
+            # Retry OCR with grayscale preprocessing when the primary
+            # OCR result does not contain a plausible expiry year.
+            expiry_date = extractor.extract_expiry_date(
+                raw_text.splitlines()
+            )
+
+            retry_grayscale = False
+
+            if expiry_date:
+                expiry_year = int(expiry_date[:4])
+
+                # Years far outside a realistic document range usually
+                # indicate an OCR error, e.g. 2956 instead of 2026.
+                current_year = datetime.now().year
+
+                if expiry_year > current_year + 100:
+                    retry_grayscale = True
+                else:
+                    retry_grayscale = True
+
+                if retry_grayscale:
+                    grayscale = preprocessing.preprocess_image_grayscale(
+                        image
+                )
+
+                grayscale_text = await ocr.extract_text(
+                    grayscale
+                )   
+
+                if grayscale_text.strip():
+                    raw_text = (
+                        f"{grayscale_text}\n"
+                        f"{raw_text}"
+                    )
+
+            
 
     except preprocessing.InvalidImageError as exc:
         raise HTTPException(

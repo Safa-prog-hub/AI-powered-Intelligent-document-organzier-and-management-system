@@ -145,8 +145,16 @@ EXPIRY_PATTERNS = [
         r"(?<![A-Za-z0-9])"
         r"(?:expiry|expires?|expiration|"
         r"valid\s+(?:till|until|upto|up\s+to|through|to))"
-        r"\s*(?:date)?\s*[:=\-]?\s*"
-        r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+        r"\s*(?:date)?\s*(?:\([^)]*\))?\s*[:=\-]?\s*"
+        r"("
+        r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}"
+        r"|"
+        r"\d{1,2}\s+"
+        r"(?:JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|"
+        r"MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|"
+        r"SEP(?:T(?:EMBER)?)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?)"
+        r"\s+\d{2,4}"
+        r")",
         re.IGNORECASE,
     ),
 ]
@@ -1116,21 +1124,58 @@ def _parse_date(
     year: str,
 ) -> Optional[datetime]:
     """
-    Safely parse DD/MM/YYYY components.
+    Safely parse date components.
 
+    Supports numeric months and month names.
     Two-digit years are interpreted as 20xx.
     """
 
     try:
-
         y = int(year)
 
         if y < 100:
             y += 2000
 
+        month_text = month.strip().upper()
+
+        month_map = {
+            "JAN": 1,
+            "JANUARY": 1,
+            "FEB": 2,
+            "FEBRUARY": 2,
+            "MAR": 3,
+            "MARCH": 3,
+            "APR": 4,
+            "APRIL": 4,
+            "MAY": 5,
+            "JUN": 6,
+            "JUNE": 6,
+            "JUL": 7,
+            "JULY": 7,
+            "AUG": 8,
+            "AUGUST": 8,
+            "SEP": 9,
+            "SEPT": 9,
+            "SEPTEMBER": 9,
+            "OCT": 10,
+            "OCTOBER": 10,
+            "NOV": 11,
+            "NOVEMBER": 11,
+            "DEC": 12,
+            "DECEMBER": 12,
+        }
+
+        if month_text.isdigit():
+            m = int(month_text)
+        else:
+            m = month_map.get(month_text)
+
+        if m is None:
+            return None
+
         return datetime(
             y,
-            int(month),
+            m,
             int(day),
         )
 
@@ -1180,31 +1225,105 @@ def extract_expiry_date(
     """
     Extract the date following expiry keywords.
 
-    Examples:
-        Expiry
-        Expires
-        Valid Till
-        Valid Upto
-        Valid Until
+    Supports:
+        Expiry: 30/09/2026
+        Expiry: 30 SEP 2026
+        Date of Expiration
+        30 SEP 2026
 
     Returns:
         ISO date string or None.
     """
 
-    for line in text_lines:
+    for index, line in enumerate(text_lines):
 
-        for pattern in EXPIRY_PATTERNS:
+        candidate_lines = [line]
 
-            match = pattern.search(line)
-
-            if not match:
-                continue
-
-            day, month, year = re.split(
-                r"[/-]",
-                match.group(1),
+        # Some documents put the date on the line immediately
+        # after the expiry label.
+        if index + 1 < len(text_lines):
+            candidate_lines.append(
+                f"{line} {text_lines[index + 1]}"
             )
 
+        for candidate in candidate_lines:
+
+            for pattern in EXPIRY_PATTERNS:
+
+                match = pattern.search(candidate)
+
+                if not match:
+                    continue
+
+                date_text = match.group(1).strip()
+
+                if re.fullmatch(
+                    r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}",
+                    date_text,
+                ):
+                    day, month, year = re.split(
+                        r"[/-]",
+                        date_text,
+                    )
+
+                else:
+                    parts = re.split(
+                        r"\s+",
+                        date_text,
+                    )
+
+                    if len(parts) != 3:
+                        continue
+
+                    day, month, year = parts
+
+                parsed = _parse_date(
+                    day,
+                    month,
+                    year,
+                )
+
+                if parsed is not None:
+                    return parsed.date().isoformat()
+    # Passport-style fallback:
+    # OCR may place extra text between "Expiration" and the actual date.
+    # In that case, collect date-like values appearing after the
+    # expiration label and use the last valid one.
+    for index, line in enumerate(text_lines):
+
+        combined = line
+
+        if index + 1 < len(text_lines):
+            combined += " " + text_lines[index + 1]
+
+        expiration_match = re.search(
+            r"(?:date\s+of\s+)?expiration",
+            combined,
+            re.IGNORECASE,
+        )
+
+        if not expiration_match:
+            continue
+
+        after_expiration = combined[
+            expiration_match.end():
+        ]
+
+        date_matches = re.findall(
+            r"\b"
+            r"(\d{1,2})\s+"
+            r"(JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|"
+            r"MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|"
+            r"SEP(?:T(?:EMBER)?)?|OCT(?:OBER)?|NOV(?:EMBER)?|"
+            r"DEC(?:EMBER)?)"
+            r"\s+"
+            r"(\d{4})"
+            r"\b",
+            after_expiration,
+            re.IGNORECASE,
+        )
+
+        for day, month, year in reversed(date_matches):
             parsed = _parse_date(
                 day,
                 month,
@@ -1213,9 +1332,8 @@ def extract_expiry_date(
 
             if parsed is not None:
                 return parsed.date().isoformat()
-
+   
     return None
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. Issue date extraction
@@ -1226,6 +1344,8 @@ def extract_issue_date(
 ) -> Optional[str]:
     """
     Extract the date adjacent to issue keywords.
+
+    Supports both numeric dates and month-name dates.
 
     Returns:
         ISO date string or None.
@@ -1240,10 +1360,27 @@ def extract_issue_date(
             if not match:
                 continue
 
-            day, month, year = re.split(
-                r"[/-]",
-                match.group(1),
-            )
+            date_text = match.group(1).strip()
+
+            if re.fullmatch(
+                r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}",
+                date_text,
+            ):
+                day, month, year = re.split(
+                    r"[/-]",
+                    date_text,
+                )
+
+            else:
+                parts = re.split(
+                    r"\s+",
+                    date_text,
+                )
+
+                if len(parts) != 3:
+                    continue
+
+                day, month, year = parts
 
             parsed = _parse_date(
                 day,
