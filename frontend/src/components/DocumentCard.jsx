@@ -32,7 +32,7 @@ function FileThumb({ mimeType }) {
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 1-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z"
+          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9z"
         />
       </svg>
     </div>
@@ -53,18 +53,6 @@ function formatDate(value) {
   });
 }
 
-/**
- * DocumentCard
- *
- * Displays:
- * - document filename
- * - rename controls
- * - category
- * - tags
- * - extracted metadata
- * - preview button
- * - delete action
- */
 export default function DocumentCard({ document: doc }) {
   const { remove, rename } = useDocuments();
 
@@ -72,6 +60,8 @@ export default function DocumentCard({ document: doc }) {
   const [previewType, setPreviewType] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   const meta = doc.metadata || {};
   const category = meta.documentCategory || 'Others';
@@ -118,9 +108,7 @@ export default function DocumentCard({ document: doc }) {
       await rename(doc._id, trimmedName);
       setIsRenaming(false);
     } catch (err) {
-      setRenameError(
-        err.message || 'Could not rename document.'
-      );
+      setRenameError(err.message || 'Could not rename document.');
     } finally {
       setRenaming(false);
     }
@@ -130,6 +118,7 @@ export default function DocumentCard({ document: doc }) {
     try {
       setPreviewLoading(true);
       setPreviewError('');
+      setDownloadError('');
 
       const blob = await getDocumentFile(doc._id);
       const url = URL.createObjectURL(blob);
@@ -139,11 +128,34 @@ export default function DocumentCard({ document: doc }) {
     } catch (error) {
       console.error('Could not preview document:', error);
 
-      setPreviewError(
-        'Could not load the document preview.'
-      );
+      setPreviewError('Could not load the document preview.');
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      setDownloadError('');
+
+      const blob = await getDocumentFile(doc._id);
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = currentFilename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Could not download document:', error);
+
+      setDownloadError('Could not download the document.');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -151,10 +163,11 @@ export default function DocumentCard({ document: doc }) {
     setPreviewUrl(null);
     setPreviewType(null);
     setPreviewError('');
+    setDownloadError('');
   };
 
   /*
-   * Clean up the object URL when the component is removed.
+   * Clean up the preview object URL when the component is removed.
    */
   useEffect(() => {
     return () => {
@@ -440,7 +453,10 @@ export default function DocumentCard({ document: doc }) {
 
             {/* Modal header */}
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-3">
-              <h2 className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-800">
+              <h2
+                className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-800"
+                title={currentFilename}
+              >
                 {currentFilename}
               </h2>
 
@@ -491,14 +507,58 @@ export default function DocumentCard({ document: doc }) {
             </div>
 
             {/* Modal footer */}
-            <div className="flex shrink-0 items-center justify-end border-t border-slate-200 bg-white px-4 py-3">
-              <button
-                type="button"
-                onClick={closePreview}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
-              >
-                Close
-              </button>
+            <div className="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+
+              {/* Download error */}
+              <div className="min-w-0 flex-1">
+                {downloadError && (
+                  <p className="text-xs font-medium text-rose-500">
+                    {downloadError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end gap-2">
+
+                {/* Download */}
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 3v12m0 0 4-4m-4 4-4-4"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 21h14"
+                    />
+                  </svg>
+
+                  {downloading ? 'Downloading...' : 'Download'}
+                </button>
+
+                {/* Close */}
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
+                >
+                  Close
+                </button>
+
+              </div>
             </div>
           </div>
         </div>
