@@ -7,7 +7,7 @@ const CATEGORY_COLORS = {
   Finance: 'bg-emerald-100 text-emerald-700',
   Insurance: 'bg-sky-100 text-sky-700',
   Education: 'bg-amber-100 text-amber-700',
-  Others: 'bg-slate-200 text-slate-600',
+  Others: 'bg-slate-100 text-slate-600',
 };
 
 /** MIME-aware thumbnail placeholder. */
@@ -16,12 +16,14 @@ function FileThumb({ mimeType }) {
 
   return (
     <div
-      className={`flex h-24 w-20 shrink-0 items-center justify-center rounded-lg ${isPdf ? 'bg-rose-100' : 'bg-brand-50'
-        }`}
+      className={`flex h-24 w-20 shrink-0 items-center justify-center rounded-xl ${
+        isPdf ? 'bg-rose-50' : 'bg-violet-50'
+      }`}
     >
       <svg
-        className={`h-10 w-10 ${isPdf ? 'text-rose-500' : 'text-brand-500'
-          }`}
+        className={`h-10 w-10 ${
+          isPdf ? 'text-rose-500' : 'text-violet-500'
+        }`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -130,7 +132,6 @@ export default function DocumentCard({ document: doc }) {
       setPreviewError('');
 
       const blob = await getDocumentFile(doc._id);
-
       const url = URL.createObjectURL(blob);
 
       setPreviewUrl(url);
@@ -184,10 +185,13 @@ export default function DocumentCard({ document: doc }) {
 
   return (
     <>
-      <article className="card group flex min-w-0 gap-3 p-4 transition-shadow hover:shadow-md sm:gap-4">
+      <article className="group flex min-w-0 gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md">
+
+        {/* File thumbnail */}
         <FileThumb mimeType={doc.mimeType} />
 
         <div className="min-w-0 flex-1">
+
           {isRenaming ? (
             <div className="space-y-2">
               <input
@@ -205,7 +209,7 @@ export default function DocumentCard({ document: doc }) {
                 }}
                 autoFocus
                 maxLength={200}
-                className="w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
                 aria-label="New filename"
               />
 
@@ -220,7 +224,7 @@ export default function DocumentCard({ document: doc }) {
                   type="button"
                   onClick={handleRename}
                   disabled={renaming}
-                  className="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {renaming ? 'Saving...' : 'Save'}
                 </button>
@@ -229,7 +233,7 @@ export default function DocumentCard({ document: doc }) {
                   type="button"
                   onClick={cancelRename}
                   disabled={renaming}
-                  className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancel
                 </button>
@@ -249,7 +253,7 @@ export default function DocumentCard({ document: doc }) {
                 <button
                   type="button"
                   onClick={startRename}
-                  className="shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition hover:bg-brand-50 hover:text-brand-600 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+                  className="shrink-0 rounded-lg p-1.5 text-slate-300 opacity-0 transition hover:bg-violet-50 hover:text-violet-600 focus:opacity-100 focus:outline-none group-hover:opacity-100"
                   aria-label="Rename document"
                   title="Rename document"
                 >
@@ -275,11 +279,12 @@ export default function DocumentCard({ document: doc }) {
               </div>
 
               {/* Category + tags */}
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`badge ${CATEGORY_COLORS[category] ||
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                    CATEGORY_COLORS[category] ||
                     CATEGORY_COLORS.Others
-                    }`}
+                  }`}
                 >
                   {category}
                 </span>
@@ -287,7 +292,7 @@ export default function DocumentCard({ document: doc }) {
                 {doc.tags?.slice(0, 2).map((tag) => (
                   <span
                     key={tag}
-                    className="badge bg-slate-100 text-slate-500"
+                    className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-500"
                   >
                     #{tag}
                   </span>
@@ -295,10 +300,11 @@ export default function DocumentCard({ document: doc }) {
               </div>
 
               {/* Document metadata */}
-              <dl className="mt-2 space-y-1.5 text-xs text-slate-500">
+              <dl className="mt-3 space-y-1.5 text-xs text-slate-500">
+
                 {meta.idNumber && (
                   <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-                    <dt className="font-medium text-slate-500">
+                    <dt className="font-medium text-slate-400">
                       ID No.
                     </dt>
 
@@ -309,24 +315,26 @@ export default function DocumentCard({ document: doc }) {
                 )}
 
                 {meta.name &&
-                    ['PAN', 'Aadhaar', 'Marksheet', 'Driving Licence'].includes(
-                      doc.documentType
-                    ) && (
-                      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-                        <dt className="font-medium text-slate-500">
-                          Name
-                        </dt>
+                  [
+                    'PAN',
+                    'Aadhaar',
+                    'Marksheet',
+                    'Driving Licence',
+                  ].includes(doc.documentType) && (
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
+                      <dt className="font-medium text-slate-400">
+                        Name
+                      </dt>
 
-                        <dd className="min-w-0 break-words text-slate-700">
-                          {meta.name}
-                        </dd>
-                      </div>
-                    )
-                }
+                      <dd className="min-w-0 break-words text-slate-700">
+                        {meta.name}
+                      </dd>
+                    </div>
+                  )}
 
                 {meta.expiryDate && (
                   <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-                    <dt className="font-medium text-slate-500">
+                    <dt className="font-medium text-slate-400">
                       Expires
                     </dt>
 
@@ -338,7 +346,7 @@ export default function DocumentCard({ document: doc }) {
 
                 {meta.issueDate && (
                   <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-                    <dt className="font-medium text-slate-500">
+                    <dt className="font-medium text-slate-400">
                       Issued
                     </dt>
 
@@ -350,12 +358,12 @@ export default function DocumentCard({ document: doc }) {
               </dl>
 
               {/* Preview */}
-              <div className="mt-3">
+              <div className="mt-4">
                 <button
                   type="button"
                   onClick={handlePreview}
                   disabled={previewLoading}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <svg
                     className="h-4 w-4"
@@ -394,7 +402,7 @@ export default function DocumentCard({ document: doc }) {
           <button
             type="button"
             onClick={() => remove(doc._id)}
-            className="self-start shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-opacity hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100"
+            className="shrink-0 self-start rounded-lg p-1.5 text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100"
             aria-label="Delete document"
             title="Delete document"
           >
@@ -428,7 +436,8 @@ export default function DocumentCard({ document: doc }) {
             }
           }}
         >
-          <div className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
             {/* Modal header */}
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-3">
               <h2 className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-800">
@@ -438,7 +447,7 @@ export default function DocumentCard({ document: doc }) {
               <button
                 type="button"
                 onClick={closePreview}
-                className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-violet-50 hover:text-violet-600"
                 aria-label="Close preview"
                 title="Close preview"
               >
@@ -486,7 +495,7 @@ export default function DocumentCard({ document: doc }) {
               <button
                 type="button"
                 onClick={closePreview}
-                className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700"
               >
                 Close
               </button>

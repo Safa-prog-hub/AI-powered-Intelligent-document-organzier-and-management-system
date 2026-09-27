@@ -2,10 +2,10 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useDocuments } from '../context/DocumentContext';
 
-/** Small inline upload icon. */
+/** Upload icon. */
 const UploadIcon = () => (
   <svg
-    className="mx-auto h-10 w-10 text-brand-500"
+    className="mx-auto h-11 w-11 text-violet-600"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"
@@ -83,15 +83,16 @@ export default function UploadZone() {
     uploadState.status === 'processing';
 
   return (
-    <div className="card p-6">
+    <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm sm:p-6">
+
       <div
         {...getRootProps()}
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 sm:p-10 ${
           isDragActive
-            ? 'border-brand-600 bg-brand-50'
+            ? 'border-violet-600 bg-violet-50 shadow-inner'
             : busy
               ? 'border-slate-300 bg-slate-50'
-              : 'border-slate-300 hover:border-brand-500 hover:bg-brand-50/50'
+              : 'border-violet-200 bg-violet-50/30 hover:border-violet-500 hover:bg-violet-50'
         }`}
       >
         <input {...getInputProps()} />
@@ -99,39 +100,47 @@ export default function UploadZone() {
         {/* Idle */}
         {uploadState.status === 'idle' && (
           <>
-            <UploadIcon />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100">
+              <UploadIcon />
+            </div>
 
-            <p className="mt-3 text-sm font-medium text-slate-600">
+            <p className="mt-4 text-base font-semibold text-slate-700">
               {STATUS_COPY.idle}
             </p>
 
-            <p className="mt-1 text-xs text-slate-400">
-              JPG, PNG or PDF — max 15MB each, up to 10 files.
-              AI extracts text, entities & semantic tags
-              automatically.
+            <p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-slate-400">
+              JPG, PNG or PDF · max 15MB each · up to 10 files.
+              <br className="hidden sm:block" />
+              AI extracts text, entities and semantic tags automatically.
             </p>
+
+            <span className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700">
+              Browse files
+            </span>
           </>
         )}
 
         {/* Uploading */}
         {uploadState.status === 'uploading' && (
           <div className="mx-auto max-w-sm">
-            <UploadIcon />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100">
+              <UploadIcon />
+            </div>
 
-            <p className="mt-3 text-sm font-medium text-brand-600">
+            <p className="mt-4 text-sm font-semibold text-violet-700">
               {STATUS_COPY.uploading}
             </p>
 
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-violet-100">
               <div
-                className="h-full rounded-full bg-brand-600 transition-all duration-300"
+                className="h-full rounded-full bg-violet-600 transition-all duration-300"
                 style={{
                   width: `${uploadState.progress}%`,
                 }}
               />
             </div>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               {uploadState.progress}% — {uploadState.fileName}
             </p>
           </div>
@@ -140,19 +149,21 @@ export default function UploadZone() {
         {/* Background processing */}
         {uploadState.status === 'processing' && (
           <div className="mx-auto max-w-sm">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-200 border-t-violet-600" />
+            </div>
 
-            <p className="mt-3 text-sm font-medium text-brand-600">
+            <p className="mt-4 text-sm font-semibold text-violet-700">
               {STATUS_COPY.processing}
             </p>
 
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs leading-5 text-slate-500">
               Your documents are already uploaded. You can
               continue using the application while OCR and
               AI processing finish.
             </p>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               {uploadState.fileName}
             </p>
           </div>
@@ -161,9 +172,9 @@ export default function UploadZone() {
         {/* Success */}
         {uploadState.status === 'success' && (
           <>
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
               <svg
-                className="h-6 w-6 text-emerald-600"
+                className="h-7 w-7 text-emerald-600"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -177,11 +188,11 @@ export default function UploadZone() {
               </svg>
             </div>
 
-            <p className="mt-3 text-sm font-medium text-emerald-700">
+            <p className="mt-4 text-sm font-semibold text-emerald-700">
               {STATUS_COPY.success}
             </p>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               {uploadState.fileName}
             </p>
           </>
@@ -190,9 +201,9 @@ export default function UploadZone() {
         {/* Error */}
         {uploadState.status === 'error' && (
           <>
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-rose-100">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100">
               <svg
-                className="h-6 w-6 text-rose-600"
+                className="h-7 w-7 text-rose-600"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -206,11 +217,11 @@ export default function UploadZone() {
               </svg>
             </div>
 
-            <p className="mt-3 text-sm font-medium text-rose-700">
+            <p className="mt-4 text-sm font-semibold text-rose-700">
               {STATUS_COPY.error}
             </p>
 
-            <p className="mt-1 text-xs text-rose-500">
+            <p className="mt-2 text-xs text-rose-500">
               {uploadState.error}
             </p>
           </>
@@ -218,7 +229,7 @@ export default function UploadZone() {
       </div>
 
       {rejected && (
-        <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+        <p className="mt-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
           {rejected}
         </p>
       )}

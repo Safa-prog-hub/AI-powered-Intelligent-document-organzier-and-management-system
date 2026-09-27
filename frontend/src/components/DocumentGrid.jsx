@@ -14,27 +14,11 @@ const CATEGORY_COLORS = {
   Finance: 'bg-emerald-100 text-emerald-700',
   Insurance: 'bg-sky-100 text-sky-700',
   Education: 'bg-amber-100 text-amber-700',
-  Others: 'bg-slate-200 text-slate-600',
+  Others: 'bg-slate-100 text-slate-600',
 };
 
 /**
  * DocumentGrid — renders the organized document library.
- *
- * Responsive layout:
- * - Mobile: 1 card per row
- * - Tablet: 2 cards per row
- * - Desktop: 2 cards per row
- * - Extra-wide desktop: 3 cards per row
- *
- * Keeping 2 columns on normal desktop gives each document card
- * enough horizontal space to display its extracted information
- * without making the card feel cramped.
- *
- * @param {{
- *   documents: Array<object>,
- *   loading: boolean,
- *   error: string|null
- * }} props
  */
 export default function DocumentGrid({ documents, loading, error }) {
   const groups = useMemo(() => {
@@ -53,8 +37,6 @@ export default function DocumentGrid({ documents, loading, error }) {
       buckets.get(category).push(doc);
     }
 
-    // Keep only categories that contain documents,
-    // while preserving the preferred category order.
     return CATEGORY_ORDER
       .filter((category) => buckets.get(category).length)
       .map((category) => ({
@@ -72,7 +54,7 @@ export default function DocumentGrid({ documents, loading, error }) {
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="card h-44 animate-pulse bg-slate-100"
+            className="h-44 animate-pulse rounded-2xl border border-slate-100 bg-white shadow-sm"
           />
         ))}
       </div>
@@ -84,8 +66,30 @@ export default function DocumentGrid({ documents, loading, error }) {
    */
   if (error) {
     return (
-      <div className="card border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-600">
-        Could not load documents: {error}
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-600">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-rose-100">
+          <svg
+            className="h-5 w-5 text-rose-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m0 3.75h.007M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z"
+            />
+          </svg>
+        </div>
+
+        <p className="mt-3 font-medium">
+          Could not load documents
+        </p>
+
+        <p className="mt-1 text-xs text-rose-500">
+          {error}
+        </p>
       </div>
     );
   }
@@ -95,14 +99,36 @@ export default function DocumentGrid({ documents, loading, error }) {
    */
   if (!documents || documents.length === 0) {
     return (
-      <div className="card p-10 text-center">
-        <p className="text-sm font-medium text-slate-500">
+      <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100">
+          <svg
+            className="h-6 w-6 text-violet-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.7}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6.75 3.75h7.5l4.5 4.5v12H6.75a1.5 1.5 0 0 1-1.5-1.5v-13.5a1.5 1.5 0 0 1 1.5-1.5Z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M14.25 3.75v4.5h4.5"
+            />
+          </svg>
+        </div>
+
+        <p className="mt-4 text-sm font-semibold text-slate-700">
           No documents yet
         </p>
 
-        <p className="mt-1 text-xs text-slate-400">
-          Drop your first file into the upload zone — the AI will
-          classify, extract and group it.
+        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
+          Drop your first file into the upload zone and
+          the AI will classify, extract and organize it
+          automatically.
         </p>
       </div>
     );
@@ -115,33 +141,28 @@ export default function DocumentGrid({ documents, loading, error }) {
     <div className="space-y-8">
       {groups.map(({ category, items }) => (
         <section key={category}>
+
           {/* Category heading */}
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-5 w-1 rounded-full bg-violet-600" />
+
+            <h2 className="text-sm font-bold tracking-wide text-slate-700">
               {category}
             </h2>
 
             <span
-              className={`badge ${
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 CATEGORY_COLORS[category] ||
                 CATEGORY_COLORS.Others
               }`}
             >
               {items.length}
             </span>
+
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
-          {/*
-           * Responsive document layout:
-           *
-           * Mobile  → 1 column
-           * Tablet  → 2 columns
-           * Desktop → 2 columns
-           * XL      → 3 columns
-           *
-           * The normal desktop layout intentionally stays at
-           * two columns so document metadata has enough room.
-           */}
+          {/* Document cards */}
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((doc) => (
               <DocumentCard
