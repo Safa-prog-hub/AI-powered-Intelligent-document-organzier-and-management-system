@@ -14,7 +14,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/authRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
-
+const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // ── Global middleware ─────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ app.get('/health', (_req, res) => {
 // ── Route modules ─────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
-
+app.use('/api/admin', adminRoutes);
 // ── Error pipeline (must be registered last) ──────────────────────────────
 app.use(notFound);
 app.use(errorHandler);

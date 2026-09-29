@@ -116,4 +116,30 @@ export async function getDocumentFile(id) {
 
   return response.data;
 }
+export async function downloadDocumentFile(id) {
+  const response = await API.get(`/documents/${id}/download`, {
+    responseType: 'blob',
+  });
+
+  return response.data;
+}
+/** Fetch admin dashboard statistics. */
+export async function fetchAdminStats() {
+  const { data } = await API.get('/admin/stats');
+  return data;
+}
+
+/** Fetch recent activity for the admin dashboard. */
+export async function fetchAdminActivity(limit = 20) {
+  const { data } = await API.get('/admin/activity', {
+    params: { limit },
+  });
+  return data.activities;
+}
+
+/** Fetch all users for the admin dashboard. */
+export async function fetchAdminUsers() {
+  const { data } = await API.get('/admin/users');
+  return data.users;
+}
 export default API;

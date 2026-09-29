@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDocuments } from '../context/DocumentContext';
-import { getDocumentFile } from '../api/client';
+import { getDocumentFile,downloadDocumentFile, } from '../api/client';
 
 const CATEGORY_COLORS = {
   'ID Proof': 'bg-violet-100 text-violet-700',
@@ -120,7 +120,7 @@ export default function DocumentCard({ document: doc }) {
       setPreviewError('');
       setDownloadError('');
 
-      const blob = await getDocumentFile(doc._id);
+      const blob = await downloadDocumentFile(doc._id);
       const url = URL.createObjectURL(blob);
 
       setPreviewUrl(url);

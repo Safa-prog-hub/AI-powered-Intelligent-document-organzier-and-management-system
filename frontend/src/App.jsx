@@ -5,6 +5,7 @@ import Navbar from './components/Navbar.jsx';
 import UploadZone from './components/UploadZone.jsx';
 import DocumentGrid from './components/DocumentGrid.jsx';
 import ExpiryAlerts from './components/ExpiryAlerts.jsx';
+import AdminDashboard from './components/AdminDashboard.jsx';
 import { requestNotificationPermission, showNotification } from './services/notifications.js';
 /** Restore a previous session from localStorage (if any). */
 function getStoredUser() {
@@ -72,7 +73,8 @@ export default function App() {
           setUser(null);
         }}
       />
-      <Dashboard />
+
+      {user.role === 'admin' ? <AdminDashboard /> : <Dashboard />}
     </DocumentProvider>
   );
 }

@@ -18,6 +18,7 @@ const {
   deleteDocument,
   renameDocument,
   viewDocumentFile,
+  downloadDocumentFile,
 } = require('../controllers/documentController');
 
 const router = express.Router();
@@ -36,6 +37,7 @@ router.get('/expiring', listExpiring);
 
 router.patch('/:id/rename', renameDocument);
 router.get('/:id/file', viewDocumentFile);
+router.get('/:id/download', downloadDocumentFile);
 router.get('/:id', getDocument);
 router.delete('/:id', deleteDocument);
 

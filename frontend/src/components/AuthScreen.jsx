@@ -86,8 +86,7 @@ export default function AuthScreen({ onAuthenticated }) {
           </h1>
 
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-            Upload documents and let ROSP extract, classify and organize them
-            automatically.
+            
           </p>
         </div>
 
