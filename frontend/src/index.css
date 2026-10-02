@@ -1,0 +1,312 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    color: #0f172a;
+    background: #f8fafc;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    min-width: 320px;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-slate-50 text-slate-900 antialiased;
+    margin: 0;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button,
+  a[href],
+  [role="button"] {
+    transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+    transition-duration: 160ms;
+    transition-timing-function: ease-out;
+  }
+
+  button:active:not(:disabled),
+  a[href]:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  button:disabled {
+    transition-duration: 0ms;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #4f46e5;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .surface {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .metric-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg font-bold;
+  }
+
+  .form-input {
+    @apply min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100;
+  }
+}
+
+@keyframes soft-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.motion-enter {
+  animation: soft-rise-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.motion-fade {
+  animation: soft-fade-in 220ms ease-out both;
+}
+
+@keyframes soft-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.motion-stagger > * {
+  animation: soft-rise-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.motion-stagger > :nth-child(1) { animation-delay: 30ms; }
+.motion-stagger > :nth-child(2) { animation-delay: 65ms; }
+.motion-stagger > :nth-child(3) { animation-delay: 100ms; }
+.motion-stagger > :nth-child(4) { animation-delay: 135ms; }
+.motion-stagger > :nth-child(5) { animation-delay: 170ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body,
+html.dark [class~="bg-slate-50"],
+html.dark [class~="bg-slate-50/70"] {
+  background-color: #0b1220;
+}
+
+html.dark [class~="bg-white"],
+html.dark [class~="bg-white/95"] {
+  background-color: #111c2e;
+}
+
+html.dark [class~="bg-slate-100"],
+html.dark [class~="bg-slate-50/50"] {
+  background-color: #1e293b;
+}
+
+html.dark [class~="bg-slate-200"] {
+  background-color: #334155;
+}
+
+html.dark [class~="border-slate-200"],
+html.dark [class~="border-slate-300"],
+html.dark [class~="border-slate-100"] {
+  border-color: #334155;
+}
+
+html.dark [class~="text-slate-900"],
+html.dark [class~="text-slate-800"] {
+  color: #f1f5f9;
+}
+
+html.dark [class~="text-slate-700"],
+html.dark [class~="text-slate-600"] {
+  color: #cbd5e1;
+}
+
+html.dark [class~="text-slate-500"],
+html.dark [class~="text-slate-400"] {
+  color: #94a3b8;
+}
+
+html.dark [class~="placeholder:text-slate-400"]::placeholder {
+  color: #94a3b8;
+}
+
+html.dark [class~="bg-indigo-50"] {
+  background-color: #202b4a;
+}
+
+html.dark [class~="bg-indigo-100"],
+html.dark [class~="bg-indigo-50/50"] {
+  background-color: #2a385e;
+}
+
+html.dark [class~="text-indigo-600"],
+html.dark [class~="text-indigo-700"] {
+  color: #a5b4fc;
+}
+
+html.dark [class~="border-indigo-100"] {
+  border-color: #37466b;
+}
+
+html.dark [class~="bg-emerald-50"] {
+  background-color: #12352f;
+}
+
+html.dark [class~="bg-emerald-100"] {
+  background-color: #184c3e;
+}
+
+html.dark [class~="text-emerald-700"],
+html.dark [class~="text-emerald-800"] {
+  color: #86efac;
+}
+
+html.dark [class~="border-emerald-200"] {
+  border-color: #276749;
+}
+
+html.dark [class~="bg-amber-50"],
+html.dark [class~="bg-amber-50/60"] {
+  background-color: #3b2c13;
+}
+
+html.dark [class~="bg-amber-100"] {
+  background-color: #4a3717;
+}
+
+html.dark [class~="text-amber-700"],
+html.dark [class~="text-amber-800"] {
+  color: #fcd34d;
+}
+
+html.dark [class~="bg-rose-50"],
+html.dark [class~="bg-rose-50/60"] {
+  background-color: #3b2029;
+}
+
+html.dark [class~="bg-rose-100"] {
+  background-color: #512a35;
+}
+
+html.dark [class~="text-rose-700"],
+html.dark [class~="text-rose-800"] {
+  color: #fda4af;
+}
+
+html.dark [class~="border-rose-200"] {
+  border-color: #7f3444;
+}
+
+html.dark [class~="bg-blue-50"] {
+  background-color: #172e49;
+}
+
+html.dark [class~="bg-blue-100"] {
+  background-color: #203d5c;
+}
+
+html.dark [class~="text-blue-700"] {
+  color: #93c5fd;
+}
+
+html.dark [class~="bg-sky-50"] {
+  background-color: #173447;
+}
+
+html.dark [class~="bg-sky-100"] {
+  background-color: #21475f;
+}
+
+html.dark [class~="text-sky-700"] {
+  color: #7dd3fc;
+}
+
+html.dark [class~="bg-amber-50"] [class~="text-amber-500"] {
+  color: #fcd34d;
+}
+
+html.dark [class~="hover:bg-slate-50"]:hover,
+html.dark [class~="hover:bg-slate-100"]:hover,
+html.dark [class~="hover:bg-slate-200"]:hover {
+  background-color: #263449;
+}
+
+html.dark [class~="divide-slate-100"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #263449;
+}
+
+html.dark .surface {
+  background-color: #111c2e;
+  border-color: #334155;
+}
+
+html.dark .form-input {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+html.dark select,
+html.dark option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+html.dark option:checked {
+  background-color: #3730a3;
+  color: #ffffff;
+}
+
+html.dark .sidebar-signout {
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  color: #f8fafc;
+}
+
+html.dark .sidebar-signout:hover {
+  background-color: #3b2029;
+  border-color: #7f3444;
+  color: #fecdd3;
+}
+
+html.dark [class~="bg-slate-950/35"] {
+  background-color: rgb(2 6 23 / 70%);
+}
